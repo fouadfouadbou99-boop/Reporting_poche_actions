@@ -1,13 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-import plotly.express as px
-
-from io import BytesIO
-
-# ------------------------------------------------
-# CONFIG
-# ------------------------------------------------
 
 st.set_page_config(
     page_title="Reporting Comité RPC",
@@ -16,10 +9,6 @@ st.set_page_config(
 )
 
 st.title("📊 Reporting Comité Actions RPC")
-
-# ------------------------------------------------
-# UPLOAD
-# ------------------------------------------------
 
 uploaded_file = st.file_uploader(
     "Charger le fichier Excel",
@@ -30,24 +19,20 @@ if uploaded_file:
 
     try:
 
-        # ----------------------------------------
-        # LECTURE DONNEES
-        # ----------------------------------------
-
-        data = pd.read_excel(
+        # Lecture des feuilles
+        donnees = pd.read_excel(
             uploaded_file,
-            sheet_name="Donnees"
+            sheet_name=0
         )
 
         analyse = pd.read_excel(
             uploaded_file,
-            sheet_name="Analyse"
+            sheet_name=1
         )
 
-        # ----------------------------------------
-        # CONVERSION KPI
-        # ----------------------------------------
+        st.success("✅ Fichier chargé")
 
+        # Renommage des colonnes
         analyse.columns = [
             "Indicateur",
             "Valeur"
@@ -61,58 +46,49 @@ if uploaded_file:
         )
 
         perf_port = (
-            kpi["Performance absolue Portefeuille"]
-            * 100
+            kpi.get(
+                "Performance absolue Portefeuille",
+                0
+            ) * 100
         )
 
         perf_indice = (
-            kpi["Performance absolue Indice"]
-            * 100
+            kpi.get(
+                "Performance absolue Indice",
+                0
+            ) * 100
         )
 
         alpha = (
-            kpi["Performance relative (Alpha brut)"]
-            * 100
+            kpi.get(
+                "Performance relative (Alpha brut)",
+                0
+            ) * 100
         )
 
-        beta = kpi["Beta"]
-
-        correlation = kpi["Correlation"]
-
-        vol_port = (
-            kpi["Volatilite annualisee Portefeuille"]
-            * 100
+        beta = kpi.get(
+            "Beta",
+            0
         )
 
-        vol_indice = (
-            kpi["Volatilite annualisee Indice"]
-            * 100
+        ir = kpi.get(
+            "Ratio Information",
+            0
         )
 
-        te = (
-            kpi["Tracking Error annualise"]
-            * 100
-        )
-
-        ir = kpi["Ratio Information"]
-
-        # ----------------------------------------
         # KPI
-        # ----------------------------------------
 
-        st.subheader(
-            "Synthèse Exécutive"
-        )
+        st.subheader("Synthèse Exécutive")
 
-        c1,c2,c3,c4,c5 = st.columns(5)
+        c1, c2, c3, c4, c5 = st.columns(5)
 
         c1.metric(
-            "Perf Portefeuille",
+            "Performance",
             f"{perf_port:.2f}%"
         )
 
         c2.metric(
-            "Perf Indice",
+            "Indice",
             f"{perf_indice:.2f}%"
         )
 
@@ -127,28 +103,22 @@ if uploaded_file:
         )
 
         c5.metric(
-            "Info Ratio",
+            "Information Ratio",
             f"{ir:.2f}"
         )
 
-        # ----------------------------------------
-        # BASE 100
-        # ----------------------------------------
+        # Base 100
 
-        portefeuille = data[
-            "VL_ portefeuille_actions"
-        ]
+        portefeuille = donnees.iloc[:,1]
 
-        benchmark = data[
-            "MAISI_RB"
-        ]
+        benchmark = donnees.iloc[:,3]
 
-        base100_portefeuille = (
+        base100_port = (
             portefeuille /
             portefeuille.iloc[0]
         ) * 100
 
-        base100_benchmark = (
+        base100_bench = (
             benchmark /
             benchmark.iloc[0]
         ) * 100
@@ -157,23 +127,20 @@ if uploaded_file:
 
         fig.add_trace(
             go.Scatter(
-                x=data["Date"],
-                y=base100_portefeuille,
+                y=base100_port,
                 name="Portefeuille"
             )
         )
 
         fig.add_trace(
             go.Scatter(
-                x=data["Date"],
-                y=base100_benchmark,
-                name="Indice"
+                y=base100_bench,
+                name="Benchmark"
             )
         )
 
         fig.update_layout(
-            title="Evolution Base 100",
-            height=600
+            title="Evolution Base 100"
         )
 
         st.plotly_chart(
@@ -181,147 +148,37 @@ if uploaded_file:
             use_container_width=True
         )
 
-        # ----------------------------------------
-        # RISQUE
-        # ----------------------------------------
+        # Analyse
 
         st.subheader(
-            "Analyse du Risque"
+            "Commentaire Automatique"
         )
-
-        risk_df = pd.DataFrame({
-
-            "Indicateur":[
-                "Volatilité Portefeuille",
-                "Volatilité Indice",
-                "Tracking Error"
-            ],
-
-            "Valeur":[
-                vol_port,
-                vol_indice,
-                te
-            ]
-        })
-
-        fig_risk = px.bar(
-            risk_df,
-            x="Indicateur",
-            y="Valeur",
-            text="Valeur",
-            color="Indicateur"
-        )
-
-        st.plotly_chart(
-            fig_risk,
-            use_container_width=True
-        )
-
-        # ----------------------------------------
-        # GESTION ACTIVE
-        # ----------------------------------------
-
-        st.subheader(
-            "Gestion Active"
-        )
-
-        active_df = pd.DataFrame({
-
-            "Indicateur":[
-                "Alpha",
-                "Information Ratio",
-                "Correlation",
-                "Beta"
-            ],
-
-            "Valeur":[
-                alpha,
-                ir,
-                correlation,
-                beta
-            ]
-        })
-
-        st.dataframe(
-            active_df,
-            use_container_width=True
-        )
-
-        # ----------------------------------------
-        # COMMENTAIRE
-        # ----------------------------------------
 
         commentaire = f"""
-Le portefeuille affiche une performance
-de {perf_port:.2f} % contre
-{perf_indice:.2f} % pour l'indice.
+Performance du portefeuille :
+{perf_port:.2f} %
 
-L'alpha ressort à {alpha:.2f} %,
-ce qui traduit une sous-performance
-relative importante.
+Performance du benchmark :
+{perf_indice:.2f} %
 
-Le bêta de {beta:.2f}
-et la corrélation de
-{correlation:.2f}
-indiquent un profil peu sensible
-aux mouvements du marché.
+Alpha :
+{alpha:.2f} %
 
-La volatilité du portefeuille
-({vol_port:.2f} %)
-est très inférieure à celle
-du benchmark
-({vol_indice:.2f} %).
+Beta :
+{beta:.2f}
 
-Le Tracking Error atteint
-{te:.2f} %.
-
-L'Information Ratio ressort à
-{ir:.2f},
-indiquant une destruction
-de valeur par la gestion active.
+Information Ratio :
+{ir:.2f}
 """
-
-        st.subheader(
-            "Note pour le Comité"
-        )
 
         st.info(commentaire)
 
-        # ----------------------------------------
-        # TABLEAU KPI
-        # ----------------------------------------
-
-        st.subheader("Tableau KPI")
-
-        table = pd.DataFrame({
-
-            "Indicateur":[
-                "Performance Portefeuille",
-                "Performance Indice",
-                "Alpha",
-                "Beta",
-                "Corrélation",
-                "Volatilité Portefeuille",
-                "Volatilité Indice",
-                "Tracking Error",
-                "Information Ratio"
-            ],
-
-            "Valeur":[
-                perf_port,
-                perf_indice,
-                alpha,
-                beta,
-                correlation,
-                vol_port,
-                vol_indice,
-                te,
-                ir
-            ]
-        })
+        st.subheader(
+            "Données"
+        )
 
         st.dataframe(
-            table,
+            donnees,
             use_container_width=True
         )
 

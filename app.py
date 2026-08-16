@@ -86,7 +86,10 @@ if uploaded_file:
             ) * 100
         )
 
-        beta = kpi.get("Beta",0)
+        beta = kpi.get(
+            "Beta",
+            0
+        )
 
         correlation = kpi.get(
             "Correlation",
@@ -132,7 +135,7 @@ if uploaded_file:
 
         st.header("1. Synthèse Exécutive")
 
-        c1,c2,c3,c4,c5,c6 = st.columns(6)
+        c1, c2, c3, c4, c5, c6, c7 = st.columns(7)
 
         c1.metric(
             "Perf Portefeuille",
@@ -164,15 +167,19 @@ if uploaded_file:
             f"{information_ratio:.2f}"
         )
 
+        c7.metric(
+            "Hit Ratio",
+            f"{hit_ratio:.2f}%"
+        )
+
         # ==================================================
         # 2. ANALYSE PERFORMANCE
         # ==================================================
 
         st.header("2. Analyse Performance")
 
-        portefeuille = donnees.iloc[:,1]
-
-        benchmark = donnees.iloc[:,3]
+        portefeuille = donnees.iloc[:, 1]
+        benchmark = donnees.iloc[:, 3]
 
         base100_port = (
             portefeuille /
@@ -188,7 +195,7 @@ if uploaded_file:
 
         fig_perf.add_trace(
             go.Scatter(
-                x=donnees.iloc[:,0],
+                x=donnees.iloc[:, 0],
                 y=base100_port,
                 name="Portefeuille"
             )
@@ -196,7 +203,7 @@ if uploaded_file:
 
         fig_perf.add_trace(
             go.Scatter(
-                x=donnees.iloc[:,0],
+                x=donnees.iloc[:, 0],
                 y=base100_bench,
                 name="Benchmark"
             )
@@ -219,13 +226,13 @@ if uploaded_file:
 
         df_risque = pd.DataFrame({
 
-            "Indicateur":[
+            "Indicateur": [
                 "Volatilité Portefeuille",
                 "Volatilité Benchmark",
                 "Tracking Error"
             ],
 
-            "Valeur":[
+            "Valeur": [
                 volatilite_port,
                 volatilite_indice,
                 tracking_error
@@ -252,16 +259,18 @@ if uploaded_file:
 
         active_df = pd.DataFrame({
 
-            "Indicateur":[
+            "Indicateur": [
                 "Alpha",
                 "Information Ratio",
+                "Hit Ratio",
                 "Beta",
                 "Corrélation"
             ],
 
-            "Valeur":[
+            "Valeur": [
                 alpha,
                 information_ratio,
+                hit_ratio,
                 beta,
                 correlation
             ]
@@ -313,6 +322,19 @@ if uploaded_file:
                 "🟢 Le portefeuille conserve un profil défensif."
             )
 
+        if hit_ratio < 50:
+            recommandations.append(
+                "🔴 Le Hit Ratio est inférieur à 50%, le portefeuille sous-performe plus souvent qu'il ne surperforme."
+            )
+        elif hit_ratio < 60:
+            recommandations.append(
+                "🟠 Le Hit Ratio est correct mais pourrait être amélioré."
+            )
+        else:
+            recommandations.append(
+                "🟢 Le Hit Ratio est satisfaisant et traduit une création de valeur récurrente."
+            )
+
         for r in recommandations:
             st.write(r)
 
@@ -326,7 +348,11 @@ if uploaded_file:
             f"""
 Le portefeuille affiche une performance de {perf_port:.2f}% contre {perf_indice:.2f}% pour le benchmark.
 
-L'alpha ressort à {alpha:.2f}% et l'Information Ratio à {information_ratio:.2f}, indiquant une sous-performance relative.
+L'alpha ressort à {alpha:.2f}%.
+
+L'Information Ratio s'établit à {information_ratio:.2f}.
+
+Le Hit Ratio atteint {hit_ratio:.2f}%, ce qui mesure la fréquence des périodes de surperformance du portefeuille par rapport à son indice de référence.
 
 Le bêta ({beta:.2f}) et la corrélation ({correlation:.2f}) traduisent le degré de sensibilité du portefeuille au marché.
 

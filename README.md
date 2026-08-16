@@ -1,54 +1,12 @@
-# Reporting Comité Actions RPC - V5
+# Reporting Comité RPC
 
-Application Streamlit permettant de produire automatiquement un reporting Comité à partir du fichier :
+Application Streamlit permettant :
 
-data_poche_actions_V0.xlsx
+- Lecture du fichier data_poche_actions_V0.xlsx
+- Calcul automatique des KPI
+- Evolution Base 100
+- Dashboard de synthèse
 
-## Fonctionnalités
+Lancement :
 
-✅ Upload du fichier Excel
-
-✅ Lecture automatique des KPI
-
-✅ Dashboard interactif
-
-✅ Courbe Base 100 Portefeuille vs Benchmark
-
-✅ Analyse du risque
-
-✅ Analyse de gestion active
-
-✅ Export Excel
-
-✅ Export PDF
-
-✅ Export PowerPoint
-
----
-
-## Installation
-
-```bash
-pip install -r requirements.txt
 streamlit run app.py
-```
-
----
-
-## Déploiement Streamlit Cloud
-
-1. Créer un dépôt GitHub
-2. Pousser les fichiers
-3. Connecter à Streamlit Cloud
-4. Déployer
-
-## Arborescence
-
-```text
-project/
-│
-├── app.py
-├── requirements.txt
-├── README.md
-├── .gitignore
-```

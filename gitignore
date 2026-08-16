@@ -1,9 +1,23 @@
+# Python
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 
-.streamlit/
-.vscode/
+# Environnements virtuels
+venv/
 .env
 
-**xlsx
+# Streamlit
+.streamlit/
+
+# VS Code
+.vscode/
+
+# Excel utilisateur
+*.xlsx
 *.xls
+
+# Système
+.DS_Store
+Thumbs.db

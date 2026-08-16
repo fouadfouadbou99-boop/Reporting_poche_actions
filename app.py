@@ -1,190 +1,229 @@
 import streamlit as st
 import pandas as pd
-import ma*plotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
-st.set_page*config(
-    page_title="Reporting *omité RPC",
+# -----------------------------
+# Configuration de la page
+# -----------------------------
+st.set_page_config(
+    page_title="Reporting Comité RPC",
     layout="wide"
 )
 
-s*.title("📊 Reporting Comité RPC")
-*uploaded_file = st.file_uploader(
-*   "Choisir le fichier Excel",
-   *type=["xlsx"]
+st.title("📊 Reporting Comité RPC")
+
+# -----------------------------
+# Upload fichier Excel
+# -----------------------------
+uploaded_file = st.file_uploader(
+    "Choisir le fichier Excel",
+    type=["xlsx"]
 )
 
-if uploaded_file:*
-    xls = pd.ExcelFile(uploaded_f*le)
+# -----------------------------
+# Traitement
+# -----------------------------
+if uploaded_file is not None:
 
-    indicateurs = pd.read_exc*l(
-        uploaded_file,
-        *heet_name=0
-    )
+    try:
 
-    data = pd.r*ad_excel(
-        uploaded_file,
- *      sheet_name=2
-    )
+        # Lecture des feuilles
+        indicateurs = pd.read_excel(
+            uploaded_file,
+            sheet_name=0
+        )
 
-    st.s*ccess("Fichier chargé avec succès"*
+        data = pd.read_excel(
+            uploaded_file,
+            sheet_name=2
+        )
 
-    # -------------------------
-*   # KPI
-    # -------------------*-----
+        st.success("✅ Fichier chargé avec succès")
 
-    indicateurs.columns = ["Indicateur", "Valeur"]
+        # Renommer les colonnes
+        indicateurs.columns = ["Indicateur", "Valeur"]
 
-    perf_p*rtefeuille = float(
-        indica*eurs.loc[
-            indicateurs["Indicateur"] ==
+        # Création dictionnaire indicateurs
+        indicateurs_dict = dict(
+            zip(
+                indicateurs["Indicateur"],
+                indicateurs["Valeur"]
+            )
+        )
+
+        # Extraction des KPI
+        perf_portefeuille = indicateurs_dict.get(
+            "Performance Portefeuille", 0
+        )
+
+        perf_indice = indicateurs_dict.get(
+            "Performance Indice", 0
+        )
+
+        alpha = indicateurs_dict.get(
+            "Alpha", 0
+        )
+
+        beta = indicateurs_dict.get(
+            "Bêta", 0
+        )
+
+        info_ratio = indicateurs_dict.get(
+            "Information Ratio", 0
+        )
+
+        # -----------------------------
+        # KPI
+        # -----------------------------
+        st.subheader("Indicateurs Clés")
+
+        col1, col2, col3, col4, col5 = st.columns(5)
+
+        col1.metric(
             "Performance Portefeuille",
-            "Valeur"
-        ].iloc[0]
-    )
+            f"{perf_portefeuille:.2%}"
+        )
 
-    perf_indice = float(
-        indicateurs.loc[
-            indicateurs["Indicateur"] ==
+        col2.metric(
             "Performance Indice",
-            "Valeur"
-        ].iloc[0]
-    )
+            f"{perf_indice:.2%}"
+        )
 
-    alpha = float(
-        indicateurs.loc[
-            indicateurs["Indicateur"] ==
+        col3.metric(
             "Alpha",
-            "Valeur"
-        ].iloc[0]
-    )
+            f"{alpha:.2%}"
+        )
 
-    beta = float(
-        indicateurs.loc[
-            indicateurs["Indicateur"] ==
+        col4.metric(
             "Bêta",
-            "Valeur"
-        ].iloc[0]
-    )
+            f"{beta:.2f}"
+        )
 
-    info_ratio = float(
-        indicateurs.loc[
-            indicateurs["Indicateur"] ==
+        col5.metric(
             "Information Ratio",
-            "Valeur"
-        ].iloc[0]
-    )
-
-    col1, col2, col3, col4, col5 = st.columns(5)
-
-    col1.metric(
-        "Performance Portefeuille",
-        f"{perf_portefeuille:.2%}"
-    )
-
-    col2.metric(
-        "Performance Indice",
-        f"{perf_indice:.2%}"
-    )
-
-    col3.metric(
-        "Alpha",
-        f"{alpha:.2%}"
-    )
-
-    col4.metric(
-        "Bêta",
-        f"{beta:.2f}"
-    )
-
-    col5.metric(
-        "Information Ratio",
-        f"{info_ratio:.2f}"
-    )
-
-    st.divider()
-
-    # -------------------------
-    # Commentaire automatique
-    # -------------------------
-
-    st.subheader("Analyse automatique")
-
-    commentaire = []
-
-    if alpha > 0:
-        commentaire.append(
-            "✅ Le portefeuille surperforme son benchmark."
-        )
-    else:
-        commentaire.append(
-            "⚠️ Le portefeuille sous-performe son benchmark."
+            f"{info_ratio:.2f}"
         )
 
-    if beta < 1:
-        commentaire.append(
-            "✅ Le portefeuille présente un profil défensif."
+        # -----------------------------
+        # Analyse automatique
+        # -----------------------------
+        st.subheader("Analyse automatique")
+
+        commentaire = ""
+
+        if alpha > 0:
+            commentaire += (
+                "✅ Le portefeuille surperforme "
+                "son benchmark.\n\n"
+            )
+        else:
+            commentaire += (
+                "⚠️ Le portefeuille sous-performe "
+                "son benchmark.\n\n"
+            )
+
+        if beta < 1:
+            commentaire += (
+                "✅ Le portefeuille présente "
+                "un profil défensif.\n\n"
+            )
+        else:
+            commentaire += (
+                "⚠️ Le portefeuille est plus "
+                "risqué que le marché.\n\n"
+            )
+
+        if info_ratio > 0:
+            commentaire += (
+                "✅ La gestion active crée "
+                "de la valeur.\n\n"
+            )
+        else:
+            commentaire += (
+                "⚠️ La gestion active ne crée "
+                "pas de valeur.\n\n"
+            )
+
+        st.write(commentaire)
+
+        # -----------------------------
+        # Vérification données
+        # -----------------------------
+        st.subheader("Graphique de performance")
+
+        cols = list(data.columns)
+
+        st.write("Colonnes détectées :")
+        st.write(cols)
+
+        portefeuille_col = None
+        benchmark_col = None
+
+        for col in cols:
+
+            if "VL" in str(col):
+                portefeuille_col = col
+
+            if "MAISI" in str(col):
+                benchmark_col = col
+
+        if portefeuille_col and benchmark_col:
+
+            portefeuille = data[portefeuille_col]
+
+            benchmark = data[benchmark_col]
+
+            portefeuille_base100 = (
+                portefeuille
+                / portefeuille.iloc[0]
+            ) * 100
+
+            benchmark_base100 = (
+                benchmark
+                / benchmark.iloc[0]
+            ) * 100
+
+            fig, ax = plt.subplots(
+                figsize=(10, 5)
+            )
+
+            ax.plot(
+                portefeuille_base100,
+                label="Portefeuille",
+                linewidth=2
+            )
+
+            ax.plot(
+                benchmark_base100,
+                label="Benchmark",
+                linewidth=2
+            )
+
+            ax.set_title(
+                "Evolution Base 100"
+            )
+
+            ax.legend()
+
+            st.pyplot(fig)
+
+        else:
+
+            st.warning(
+                "Impossible de détecter "
+                "les colonnes Portefeuille "
+                "et Benchmark."
+            )
+
+        # -----------------------------
+        # Tableau des données
+        # -----------------------------
+        st.subheader("Aperçu des données")
+
+        st.dataframe(data)
+
+    except Exception as e:
+
+        st.error(
+            f"Erreur lors de la lecture du fichier : {e}"
         )
-    else:
-        commentaire.append(
-            "⚠️ Le portefeuille est plus risqué que le marché."
-        )
-
-    if info_ratio > 0:
-        commentaire.append(
-            "✅ Les décisions actives créent de la valeur."
-        )
-    else:
-        commentaire.append(
-            "⚠️ La gestion active ne crée pas de valeur."
-        )
-
-    for ligne in commentaire:
-        st.write(ligne)
-
-    st.divider()
-
-    # -------------------------
-    # Graphique
-    # -------------------------
-
-    st.subheader("Evolution Portefeuille vs Marché")
-
-    portefeuille = data["VL_ portefeuille_actions"]
-
-    benchmark = data["MAISI_RB"]
-
-    portefeuille_base100 = (
-        portefeuille /
-        portefeuille.iloc[0]
-    ) * 100
-
-    benchmark_base100 = (
-        benchmark /
-        benchmark.iloc[0]
-    ) * 100
-
-    fig, ax = plt.subplots(figsize=(10, 5))
-
-    ax.plot(
-        portefeuille_base100,
-        label="Portefeuille"
-    )
-
-    ax.plot(
-        benchmark_base100,
-        label="Benchmark"
-    )
-
-    ax.set_title(
-        "Evolution base 100"
-    )
-
-    ax.legend()
-
-    st.pyplot(fig)
-
-    st.divider()
-
-    st.subheader("Données utilisées")
-
-    st.dataframe(data)

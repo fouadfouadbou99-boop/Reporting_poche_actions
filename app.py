@@ -91,7 +91,8 @@ if uploaded_file is not None:
         correlation = float(
             safe_get(
                 kpi,
-                "Correlation"
+                "Correlation",
+                "Corrélation"
             )
         )
 
@@ -135,7 +136,7 @@ if uploaded_file is not None:
         ) * 100
 
         # ==================================================
-        # SYNTHESE
+        # SYNTHESE EXECUTIVE
         # ==================================================
 
         st.header("1. Synthèse Exécutive")
@@ -154,7 +155,7 @@ if uploaded_file is not None:
         c7.metric("Hit Ratio", f"{hit_ratio:.2f}%")
 
         # ==================================================
-        # PERFORMANCE
+        # ANALYSE PERFORMANCE
         # ==================================================
 
         st.header("2. Analyse Performance")
@@ -162,8 +163,13 @@ if uploaded_file is not None:
         portefeuille = donnees.iloc[:, 1]
         benchmark = donnees.iloc[:, 3]
 
-        base100_port = portefeuille / portefeuille.iloc[0] * 100
-        base100_bench = benchmark / benchmark.iloc[0] * 100
+        base100_port = (
+            portefeuille / portefeuille.iloc[0]
+        ) * 100
+
+        base100_bench = (
+            benchmark / benchmark.iloc[0]
+        ) * 100
 
         fig_perf = go.Figure()
 
@@ -192,11 +198,11 @@ if uploaded_file is not None:
 
         st.plotly_chart(
             fig_perf,
-            use_container_width=True
+            width="stretch"
         )
 
         # ==================================================
-        # RISQUE
+        # ANALYSE RISQUE
         # ==================================================
 
         st.header("3. Analyse Risque")
@@ -218,12 +224,13 @@ if uploaded_file is not None:
             risque_df,
             x="Indicateur",
             y="Valeur",
-            color="Indicateur"
+            color="Indicateur",
+            text="Valeur"
         )
 
         st.plotly_chart(
             fig_risk,
-            use_container_width=True
+            width="stretch"
         )
 
         # ==================================================
@@ -251,7 +258,7 @@ if uploaded_file is not None:
 
         st.dataframe(
             active_df,
-            use_container_width=True
+            width="stretch"
         )
 
         if len(filtre.columns) > 0:
@@ -265,7 +272,7 @@ if uploaded_file is not None:
 
             st.plotly_chart(
                 fig_active,
-                use_container_width=True
+                width="stretch"
             )
 
         # ==================================================
@@ -275,19 +282,51 @@ if uploaded_file is not None:
         st.header("5. Recommandations")
 
         if alpha < 0:
-            st.warning("Alpha négatif.")
+            st.warning(
+                "🔴 Alpha négatif : sous-performance par rapport au benchmark."
+            )
 
         if information_ratio < 0:
-            st.warning("Les positions actives détruisent de la valeur.")
+            st.warning(
+                "🔴 Les positions actives détruisent de la valeur."
+            )
 
         if tracking_error > 5:
-            st.info("Surveiller le Tracking Error.")
+            st.info(
+                "🟠 Surveiller le niveau de Tracking Error."
+            )
 
         if beta < 1:
-            st.success("Profil plutôt défensif.")
+            st.success(
+                "🟢 Profil plutôt défensif."
+            )
 
         if hit_ratio < 50:
-            st.warning("Hit Ratio inférieur à 50 %.")
+            st.warning(
+                "🔴 Hit Ratio inférieur à 50 %."
+            )
+
+        # ==================================================
+        # NOTE COMITE
+        # ==================================================
+
+        st.header("Note au Comité")
+
+        st.markdown(f"""
+**Performance du portefeuille :** {perf_port:.2f}%  
+
+**Performance benchmark :** {perf_indice:.2f}%  
+
+**Alpha :** {alpha:.2f}%  
+
+**Information Ratio :** {information_ratio:.2f}  
+
+**Tracking Error :** {tracking_error:.2f}%  
+
+**Beta :** {beta:.2f}  
+
+**Hit Ratio :** {hit_ratio:.2f}%
+""")
 
         # ==================================================
         # EXPORT EXCEL
@@ -327,8 +366,8 @@ if uploaded_file is not None:
 
             export_df.to_excel(
                 writer,
-                index=False,
-                sheet_name="Reporting"
+                sheet_name="Reporting",
+                index=False
             )
 
         st.download_button(
@@ -343,3 +382,4 @@ if uploaded_file is not None:
         st.error(
             f"Erreur lors du traitement : {str(e)}"
         )
+ 

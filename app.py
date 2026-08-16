@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
+from io import BytesIO
+from reportlab.pdfgen import canvas
 
 # ==================================================
 # CONFIGURATION
@@ -28,20 +30,9 @@ if uploaded_file is not None:
 
     try:
 
-        donnees = pd.read_excel(
-            uploaded_file,
-            sheet_name=0
-        )
-
-        analyse = pd.read_excel(
-            uploaded_file,
-            sheet_name=1
-        )
-
-        filtre = pd.read_excel(
-            uploaded_file,
-            sheet_name=2
-        )
+        donnees = pd.read_excel(uploaded_file, sheet_name=0)
+        analyse = pd.read_excel(uploaded_file, sheet_name=1)
+        filtre = pd.read_excel(uploaded_file, sheet_name=2)
 
         st.success("✅ Fichier chargé avec succès")
 
@@ -49,10 +40,7 @@ if uploaded_file is not None:
         # KPI
         # ==================================================
 
-        analyse.columns = [
-            "Indicateur",
-            "Valeur"
-        ]
+        analyse.columns = ["Indicateur", "Valeur"]
 
         kpi = dict(
             zip(
@@ -62,53 +50,39 @@ if uploaded_file is not None:
         )
 
         perf_port = kpi.get(
-            "Performance absolue Portefeuille",
-            0
+            "Performance absolue Portefeuille", 0
         ) * 100
 
         perf_indice = kpi.get(
-            "Performance absolue Indice",
-            0
+            "Performance absolue Indice", 0
         ) * 100
 
         alpha = kpi.get(
-            "Performance relative (Alpha brut)",
-            0
+            "Performance relative (Alpha brut)", 0
         ) * 100
 
-        beta = kpi.get(
-            "Beta",
-            0
-        )
+        beta = kpi.get("Beta", 0)
 
-        correlation = kpi.get(
-            "Correlation",
-            0
-        )
+        correlation = kpi.get("Correlation", 0)
 
         tracking_error = kpi.get(
-            "Tracking Error annualise",
-            0
+            "Tracking Error annualise", 0
         ) * 100
 
         information_ratio = kpi.get(
-            "Ratio Information",
-            0
+            "Ratio Information", 0
         )
 
         hit_ratio = kpi.get(
-            "Hit Ratio",
-            0
+            "Hit Ratio", 0
         ) * 100
 
         volatilite_port = kpi.get(
-            "Volatilite annualisee Portefeuille",
-            0
+            "Volatilite annualisee Portefeuille", 0
         ) * 100
 
         volatilite_indice = kpi.get(
-            "Volatilite annualisee Indice",
-            0
+            "Volatilite annualisee Indice", 0
         ) * 100
 
         # ==================================================
@@ -119,42 +93,16 @@ if uploaded_file is not None:
 
         c1, c2, c3, c4 = st.columns(4)
 
-        c1.metric(
-            "Performance",
-            f"{perf_port:.2f}%"
-        )
-
-        c2.metric(
-            "Benchmark",
-            f"{perf_indice:.2f}%"
-        )
-
-        c3.metric(
-            "Alpha",
-            f"{alpha:.2f}%"
-        )
-
-        c4.metric(
-            "Information Ratio",
-            f"{information_ratio:.2f}"
-        )
+        c1.metric("Performance", f"{perf_port:.2f}%")
+        c2.metric("Benchmark", f"{perf_indice:.2f}%")
+        c3.metric("Alpha", f"{alpha:.2f}%")
+        c4.metric("Information Ratio", f"{information_ratio:.2f}")
 
         c5, c6, c7 = st.columns(3)
 
-        c5.metric(
-            "Beta",
-            f"{beta:.2f}"
-        )
-
-        c6.metric(
-            "Tracking Error",
-            f"{tracking_error:.2f}%"
-        )
-
-        c7.metric(
-            "Hit Ratio",
-            f"{hit_ratio:.2f}%"
-        )
+        c5.metric("Beta", f"{beta:.2f}")
+        c6.metric("Tracking Error", f"{tracking_error:.2f}%")
+        c7.metric("Hit Ratio", f"{hit_ratio:.2f}%")
 
         # ==================================================
         # 2. ANALYSE PERFORMANCE
@@ -247,14 +195,8 @@ if uploaded_file is not None:
                     gauge={
                         "axis": {"range": [0, 1.5]},
                         "steps": [
-                            {
-                                "range": [0, 1],
-                                "color": "lightgreen"
-                            },
-                            {
-                                "range": [1, 1.5],
-                                "color": "salmon"
-                            }
+                            {"range": [0, 1], "color": "lightgreen"},
+                            {"range": [1, 1.5], "color": "salmon"}
                         ]
                     }
                 )
@@ -275,18 +217,9 @@ if uploaded_file is not None:
                     gauge={
                         "axis": {"range": [0, 100]},
                         "steps": [
-                            {
-                                "range": [0, 50],
-                                "color": "red"
-                            },
-                            {
-                                "range": [50, 60],
-                                "color": "orange"
-                            },
-                            {
-                                "range": [60, 100],
-                                "color": "green"
-                            }
+                            {"range": [0, 50], "color": "red"},
+                            {"range": [50, 60], "color": "orange"},
+                            {"range": [60, 100], "color": "green"}
                         ]
                     }
                 )
@@ -381,23 +314,110 @@ if uploaded_file is not None:
 
         st.header("Note au Comité")
 
-        st.info(
-            f"""
-Performance du portefeuille : {perf_port:.2f} %
+        st.markdown(f"""
+**Performance du portefeuille :** {perf_port:.2f}%  
+**Performance benchmark :** {perf_indice:.2f}%  
+**Alpha :** {alpha:.2f}%  
+**Information Ratio :** {information_ratio:.2f}  
+**Tracking Error :** {tracking_error:.2f}%  
+**Beta :** {beta:.2f}  
+**Hit Ratio :** {hit_ratio:.2f}%
+""")
 
-Performance benchmark : {perf_indice:.2f} %
+        # ==================================================
+        # EXPORTS
+        # ==================================================
 
-Alpha : {alpha:.2f} %
+        st.header("📥 Téléchargements")
 
-Information Ratio : {information_ratio:.2f}
+        col_excel, col_pdf = st.columns(2)
 
-Tracking Error : {tracking_error:.2f} %
+        export_df = pd.DataFrame({
+            "Indicateur": [
+                "Performance Portefeuille",
+                "Performance Benchmark",
+                "Alpha",
+                "Information Ratio",
+                "Beta",
+                "Tracking Error",
+                "Hit Ratio",
+                "Corrélation"
+            ],
+            "Valeur": [
+                perf_port,
+                perf_indice,
+                alpha,
+                information_ratio,
+                beta,
+                tracking_error,
+                hit_ratio,
+                correlation
+            ]
+        })
 
-Beta : {beta:.2f}
+        excel_buffer = BytesIO()
 
-Hit Ratio : {hit_ratio:.2f} %
-"""
+        with pd.ExcelWriter(
+            excel_buffer,
+            engine="openpyxl"
+        ) as writer:
+            export_df.to_excel(
+                writer,
+                sheet_name="Reporting",
+                index=False
+            )
+
+        with col_excel:
+
+            st.download_button(
+                "📊 Télécharger Excel",
+                excel_buffer.getvalue(),
+                "Reporting_Comite_RPC.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+
+        pdf_buffer = BytesIO()
+
+        pdf = canvas.Canvas(pdf_buffer)
+
+        pdf.setTitle("Reporting Comité RPC")
+
+        pdf.setFont("Helvetica-Bold", 16)
+        pdf.drawString(
+            50,
+            800,
+            "REPORTING COMITE RPC"
         )
+
+        pdf.setFont("Helvetica", 11)
+
+        lignes = [
+            f"Performance Portefeuille : {perf_port:.2f} %",
+            f"Performance Benchmark : {perf_indice:.2f} %",
+            f"Alpha : {alpha:.2f} %",
+            f"Information Ratio : {information_ratio:.2f}",
+            f"Beta : {beta:.2f}",
+            f"Tracking Error : {tracking_error:.2f} %",
+            f"Hit Ratio : {hit_ratio:.2f} %",
+            f"Correlation : {correlation:.2f}"
+        ]
+
+        y = 760
+
+        for ligne in lignes:
+            pdf.drawString(50, y, ligne)
+            y -= 25
+
+        pdf.save()
+
+        with col_pdf:
+
+            st.download_button(
+                "📄 Télécharger PDF",
+                pdf_buffer.getvalue(),
+                "Reporting_Comite_RPC.pdf",
+                "application/pdf"
+            )
 
     except Exception as e:
 

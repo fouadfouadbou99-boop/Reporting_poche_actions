@@ -1,29 +1,24 @@
 import streamlit as st
 import pandas as pd
-import plotly.graph_objects as go
 import plotly.express as px
+import plotly.graph_objects as go
 
 from io import BytesIO
-import tempfile
-import matplotlib.pyplot as plt
 
 from pptx import Presentation
-from pptx.util import Inches
 
 from reportlab.platypus import (
     SimpleDocTemplate,
     Paragraph,
-    Spacer,
-    PageBreak
+    Spacer
 )
 
-from reportlab.lib.styles import (
-    getSampleStyleSheet
-)
+from reportlab.lib.styles import getSampleStyleSheet
 
-# ==================================================
-# CONFIGURATION
-# ==================================================
+
+# ------------------------------------------------
+# PAGE
+# ------------------------------------------------
 
 st.set_page_config(
     page_title="Reporting Comité RPC",
@@ -31,11 +26,12 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("📊 Reporting Comité RPC V4")
+st.title("📊 Reporting Comité RPC")
 
-# ==================================================
-# FONCTIONS
-# ==================================================
+
+# ------------------------------------------------
+# EXPORT EXCEL
+# ------------------------------------------------
 
 def create_excel_report(df):
 
@@ -48,7 +44,7 @@ def create_excel_report(df):
 
         df.to_excel(
             writer,
-            sheet_name="Reporting",
+            sheet_name="KPI",
             index=False
         )
 
@@ -56,57 +52,12 @@ def create_excel_report(df):
 
     return output
 
-# --------------------------------------------------
 
-def save_chart(
-    portefeuille,
-    benchmark
-):
+# ------------------------------------------------
+# EXPORT PDF
+# ------------------------------------------------
 
-    temp_file = tempfile.NamedTemporaryFile(
-        suffix=".png",
-        delete=False
-    )
-
-    plt.figure(figsize=(8,4))
-
-    plt.plot(
-        portefeuille,
-        label="Portefeuille",
-        linewidth=2
-    )
-
-    plt.plot(
-        benchmark,
-        label="Benchmark",
-        linewidth=2
-    )
-
-    plt.legend()
-
-    plt.grid(True)
-
-    plt.title(
-        "Evolution Base 100"
-    )
-
-    plt.savefig(
-        temp_file.name,
-        bbox_inches="tight"
-    )
-
-    plt.close()
-
-    return temp_file.name
-
-# --------------------------------------------------
-
-def create_pdf(
-
-    commentaire,
-    kpi_df
-
-):
+def create_pdf_report(commentaire, kpi_df):
 
     buffer = BytesIO()
 
@@ -123,13 +74,11 @@ def create_pdf(
         )
     )
 
-    content.append(
-        Spacer(1,20)
-    )
+    content.append(Spacer(1, 20))
 
     content.append(
         Paragraph(
-            "Synthèse Exécutive",
+            "<b>Indicateurs clés</b>",
             styles["Heading2"]
         )
     )
@@ -143,13 +92,11 @@ def create_pdf(
             )
         )
 
-    content.append(
-        PageBreak()
-    )
+    content.append(Spacer(1, 20))
 
     content.append(
         Paragraph(
-            "Analyse",
+            "<b>Analyse</b>",
             styles["Heading2"]
         )
     )
@@ -167,145 +114,74 @@ def create_pdf(
 
     return buffer
 
-# --------------------------------------------------
+
+# ------------------------------------------------
+# EXPORT POWERPOINT
+# ------------------------------------------------
 
 def create_ppt(
-
-    chart_file,
-
-    perf_port,
+    perf_portefeuille,
     perf_indice,
     alpha,
     beta,
-    ir,
-    te,
-    hit_ratio
-
+    information_ratio,
 ):
 
     prs = Presentation()
 
-    # ----------------------------------
-
-    slide1 = prs.slides.add_slide(
+    slide = prs.slides.add_slide(
         prs.slide_layouts[0]
     )
 
-    slide1.shapes.title.text = (
+    slide.shapes.title.text = (
         "Reporting Comité RPC"
     )
 
-    slide1.placeholders[1].text = (
+    slide.placeholders[1].text = (
         f"""
-Performance : {perf_port:.2f} %
+Performance Portefeuille : {perf_portefeuille:.2f} %
 
-Benchmark : {perf_indice:.2f} %
+Performance Indice : {perf_indice:.2f} %
 
 Alpha : {alpha:.2f} %
 """
     )
 
-    # ----------------------------------
-
     slide2 = prs.slides.add_slide(
-        prs.slide_layouts[5]
+        prs.slide_layouts[1]
     )
 
     slide2.shapes.title.text = (
-        "Performance Base 100"
-    )
-
-    slide2.shapes.add_picture(
-        chart_file,
-        Inches(0.5),
-        Inches(1.2),
-        width=Inches(8)
-    )
-
-    # ----------------------------------
-
-    slide3 = prs.slides.add_slide(
-        prs.slide_layouts[1]
-    )
-
-    slide3.shapes.title.text = (
         "Analyse du Risque"
     )
 
-    slide3.placeholders[1].text = (
+    slide2.placeholders[1].text = (
         f"""
 Bêta : {beta:.2f}
 
-Tracking Error : {te:.2f} %
-
-Volatilité maîtrisée
+Information Ratio : {information_ratio:.2f}
 """
     )
 
-    # ----------------------------------
+    buffer = BytesIO()
 
-    slide4 = prs.slides.add_slide(
-        prs.slide_layouts[1]
-    )
+    prs.save(buffer)
 
-    slide4.shapes.title.text = (
-        "Gestion Active"
-    )
+    buffer.seek(0)
 
-    slide4.placeholders[1].text = (
-        f"""
-Alpha : {alpha:.2f} %
+    return buffer
 
-Information Ratio : {ir:.2f}
 
-Hit Ratio : {hit_ratio:.2f} %
-"""
-    )
-
-    # ----------------------------------
-
-    slide5 = prs.slides.add_slide(
-        prs.slide_layouts[1]
-    )
-
-    slide5.shapes.title.text = (
-        "Recommandations"
-    )
-
-    slide5.placeholders[1].text = (
-        """
-• Analyser les sources de sous-performance
-
-• Réviser l’allocation sectorielle
-
-• Renforcer la sélection de titres
-
-• Surveiller l’évolution du risque actif
-
-• Améliorer la génération d’alpha
-"""
-    )
-
-    ppt_buffer = BytesIO()
-
-    prs.save(
-        ppt_buffer
-    )
-
-    ppt_buffer.seek(0)
-
-    return ppt_buffer
-
-# ==================================================
-# UPLOAD
-# ==================================================
+# ------------------------------------------------
+# UPLOAD EXCEL
+# ------------------------------------------------
 
 uploaded_file = st.file_uploader(
     "Choisir le fichier Excel",
     type=["xlsx"]
 )
 
-if uploaded_file:
+if uploaded_file is not None:
 
     try:
 
@@ -314,77 +190,86 @@ if uploaded_file:
             sheet_name=0
         )
 
-        data = pd.read_excel(
-            uploaded_file,
-            sheet_name=2
-        )
-
         indicateurs.columns = [
             "Indicateur",
             "Valeur"
         ]
 
-        d = dict(
+        indicateurs_dict = dict(
             zip(
                 indicateurs["Indicateur"],
                 indicateurs["Valeur"]
             )
         )
 
-        perf_port = d.get(
-            "Performance Portefeuille",
-            0
-        ) * 100
+        performance_portefeuille = (
+            indicateurs_dict.get(
+                "Performance Portefeuille",
+                0
+            ) * 100
+        )
 
-        perf_indice = d.get(
-            "Performance Indice",
-            0
-        ) * 100
+        performance_indice = (
+            indicateurs_dict.get(
+                "Performance Indice",
+                0
+            ) * 100
+        )
 
-        alpha = d.get(
-            "Alpha",
-            0
-        ) * 100
+        alpha = (
+            indicateurs_dict.get(
+                "Alpha",
+                0
+            ) * 100
+        )
 
-        beta = d.get(
+        beta = indicateurs_dict.get(
             "Bêta",
             0
         )
 
-        ir = d.get(
+        information_ratio = indicateurs_dict.get(
             "Information Ratio",
             0
         )
 
-        te = d.get(
-            "Tracking Error Annualisé",
-            0
-        ) * 100
+        volatilite = (
+            indicateurs_dict.get(
+                "Volatilité Annualisée Portefeuille",
+                0
+            ) * 100
+        )
 
-        hit_ratio = d.get(
-            "Hit Ratio",
-            0
-        ) * 100
+        tracking_error = (
+            indicateurs_dict.get(
+                "Tracking Error Annualisé",
+                0
+            ) * 100
+        )
 
-        vol = d.get(
-            "Volatilité Annualisée Portefeuille",
-            0
-        ) * 100
+        hit_ratio = (
+            indicateurs_dict.get(
+                "Hit Ratio",
+                0
+            ) * 100
+        )
 
-        # ==================================================
+        # -----------------------------------------
         # KPI
-        # ==================================================
+        # -----------------------------------------
 
-        c1,c2,c3,c4,c5 = st.columns(5)
+        st.header("Tableau de Bord")
+
+        c1, c2, c3, c4, c5 = st.columns(5)
 
         c1.metric(
             "Performance",
-            f"{perf_port:.2f}%"
+            f"{performance_portefeuille:.2f}%"
         )
 
         c2.metric(
             "Indice",
-            f"{perf_indice:.2f}%"
+            f"{performance_indice:.2f}%"
         )
 
         c3.metric(
@@ -398,57 +283,34 @@ if uploaded_file:
         )
 
         c5.metric(
-            "IR",
-            f"{ir:.2f}"
+            "Info Ratio",
+            f"{information_ratio:.2f}"
         )
 
-        # ==================================================
-        # BASE100
-        # ==================================================
+        # -----------------------------------------
+        # PERFORMANCE
+        # -----------------------------------------
 
-        vl_col = None
-        indice_col = None
+        df_perf = pd.DataFrame({
 
-        for col in data.columns:
+            "Indicateur": [
+                "Portefeuille",
+                "Indice"
+            ],
 
-            if "VL" in str(col):
-                vl_col = col
+            "Valeur": [
+                performance_portefeuille,
+                performance_indice
+            ]
+        })
 
-            if "MAISI" in str(col):
-                indice_col = col
-
-        portefeuille = data[vl_col]
-
-        benchmark = data[indice_col]
-
-        base100_portefeuille = (
-            portefeuille
-            / portefeuille.iloc[0]
-        ) * 100
-
-        base100_benchmark = (
-            benchmark
-            / benchmark.iloc[0]
-        ) * 100
-
-        fig = go.Figure()
-
-        fig.add_trace(
-            go.Scatter(
-                y=base100_portefeuille,
-                name="Portefeuille"
-            )
-        )
-
-        fig.add_trace(
-            go.Scatter(
-                y=base100_benchmark,
-                name="Benchmark"
-            )
-        )
-
-        fig.update_layout(
-            title="Evolution Base 100"
+        fig = px.bar(
+            df_perf,
+            x="Indicateur",
+            y="Valeur",
+            color="Indicateur",
+            text="Valeur",
+            title="Performance"
         )
 
         st.plotly_chart(
@@ -456,95 +318,136 @@ if uploaded_file:
             use_container_width=True
         )
 
-        chart_file = save_chart(
-            base100_portefeuille,
-            base100_benchmark
+        # -----------------------------------------
+        # RISQUE
+        # -----------------------------------------
+
+        fig_beta = go.Figure(
+            go.Indicator(
+                mode="gauge+number",
+                value=beta,
+                title={"text": "Bêta"},
+                gauge={
+                    "axis": {
+                        "range": [0, 1.5]
+                    }
+                }
+            )
         )
 
-        # ==================================================
-        # ANALYSE
-        # ==================================================
+        st.plotly_chart(
+            fig_beta,
+            use_container_width=True
+        )
+
+        # -----------------------------------------
+        # COMMENTAIRE
+        # -----------------------------------------
 
         commentaire = f"""
-Le portefeuille affiche une performance
-de {perf_port:.2f}% contre
-{perf_indice:.2f}% pour le benchmark.
+Le portefeuille affiche une performance de
+{performance_portefeuille:.2f}% contre
+{performance_indice:.2f}% pour le benchmark.
 
 L'alpha ressort à {alpha:.2f}%.
 
-Le bêta est de {beta:.2f}.
+Le bêta s'établit à {beta:.2f}.
 
-Le tracking error s'établit à
-{te:.2f}%.
+L'Information Ratio est de
+{information_ratio:.2f}.
 
-L'information ratio est de
-{ir:.2f}.
+Le Tracking Error ressort à
+{tracking_error:.2f}%.
 
-Le hit ratio est de
+Le Hit Ratio est de
 {hit_ratio:.2f}%.
 """
 
+        st.subheader(
+            "Commentaire automatique"
+        )
+
         st.info(commentaire)
 
-        # ==================================================
-        # EXPORTS
-        # ==================================================
+        # -----------------------------------------
+        # TABLEAU KPI
+        # -----------------------------------------
 
         kpi_df = pd.DataFrame({
 
-            "Indicateur":[
+            "Indicateur": [
                 "Performance",
                 "Benchmark",
                 "Alpha",
-                "Beta",
+                "Bêta",
                 "Information Ratio",
+                "Volatilité",
                 "Tracking Error",
                 "Hit Ratio"
             ],
 
-            "Valeur":[
-                perf_port,
-                perf_indice,
+            "Valeur": [
+                performance_portefeuille,
+                performance_indice,
                 alpha,
                 beta,
-                ir,
-                te,
+                information_ratio,
+                volatilite,
+                tracking_error,
                 hit_ratio
             ]
         })
 
+        st.dataframe(
+            kpi_df,
+            use_container_width=True
+        )
+
+        # -----------------------------------------
+        # TELECHARGEMENTS
+        # -----------------------------------------
+
+        st.header(
+            "Exports"
+        )
+
+        excel_file = create_excel_report(
+            kpi_df
+        )
+
         st.download_button(
             "📥 Télécharger Excel",
-            create_excel_report(kpi_df),
+            excel_file,
             file_name="Reporting_Comite.xlsx"
+        )
+
+        pdf_file = create_pdf_report(
+            commentaire,
+            kpi_df
         )
 
         st.download_button(
             "📄 Télécharger PDF",
-            create_pdf(
-                commentaire,
-                kpi_df
-            ),
+            pdf_file,
             file_name="Reporting_Comite.pdf"
+        )
+
+        ppt_file = create_ppt(
+            performance_portefeuille,
+            performance_indice,
+            alpha,
+            beta,
+            information_ratio
         )
 
         st.download_button(
             "📽 Télécharger PowerPoint",
-            create_ppt(
-                chart_file,
-                perf_port,
-                perf_indice,
-                alpha,
-                beta,
-                ir,
-                te,
-                hit_ratio
-            ),
+            ppt_file,
             file_name="Reporting_Comite.pptx"
         )
 
     except Exception as e:
 
         st.error(
-            f"Erreur : {e}"
+            f"Erreur : {str(e)}"
         )

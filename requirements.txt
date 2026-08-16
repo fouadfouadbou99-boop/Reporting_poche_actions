@@ -3,7 +3,7 @@ pandas
 numpy
 openpyxl
 plotly
-python-pptx
-reportlab
-matplotlib
 xlsxwriter
+reportlab
+python-pptx
+matplotlib

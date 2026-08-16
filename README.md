@@ -1,58 +1,22 @@
 # Reporting Comité Actions RPC
 
-Application Streamlit permettant :
+Application Streamlit permettant de générer automatiquement un reporting de portefeuille Actions RPC à partir d'un fichier Excel.
+
+## Fonctionnalités
 
 - Chargement d'un fichier Excel
+- Synthèse exécutive
 - Analyse de performance
 - Analyse du risque
 - Analyse de la gestion active
-- Calcul du Tracking Error
-- Calcul du Ratio d'Information
+- Affichage des KPI
+- Distribution des Active Returns
+- Recommandations automatiques
 - Export Excel
-- Export PDF
 
 ## Installation
 
-pip install streamlit pandas plotly openpyxl reportlab
+Créer un environnement virtuel :
 
-## Lancement
-
-streamlit run app.py
-
-## Structure du fichier Excel
-
-### Feuille 1 : Donnees
-
-Historique des VL portefeuille et benchmark.
-
-### Feuille 2 : Analyse
-
-Indicateurs calculés :
-
-- Performance absolue Portefeuille
-- Performance absolue Indice
-- Alpha
-- Beta
-- Correlation
-- Tracking Error annualise
-- Ratio Information
-- Hit Ratio
-- Volatilite annualisee Portefeuille
-- Volatilite annualisee Indice
-
-### Feuille 3 : Filtre
-
-Série des Active Returns.
-
-## Formule du Ratio d'Information
-
-Information Ratio =
-Alpha annualisé / Tracking Error annualisé
-
-Exemple :
-
-Alpha annualisé = -14,58 %
-
-Tracking Error annualisé = 4,05 %
-
-Information Ratio = -3,60
+```bash
+python -m venv venv

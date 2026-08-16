@@ -3,7 +3,6 @@ import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 from io import BytesIO
-from reportlab.pdfgen import canvas
 
 # ==================================================
 # CONFIGURATION
@@ -16,6 +15,18 @@ st.set_page_config(
 )
 
 st.title("📊 Reporting Comité Actions RPC")
+
+# ==================================================
+# FONCTION UTILITAIRE
+# ==================================================
+
+def safe_get(kpi, *keys, default=0):
+    for key in keys:
+        if key in kpi:
+            value = kpi[key]
+            if pd.notna(value):
+                return value
+    return default
 
 # ==================================================
 # UPLOAD
@@ -49,72 +60,82 @@ if uploaded_file is not None:
             )
         )
 
-        perf_port = kpi.get(
-            "Performance absolue Portefeuille",
-            0
-        ) * 100
-
-        perf_indice = kpi.get(
-            "Performance absolue Indice",
-            0
-        ) * 100
-
-        alpha = kpi.get(
-            "Performance relative (Alpha brut)",
-            0
-        ) * 100
-
-        beta = kpi.get("Beta", 0)
-
-        correlation = kpi.get("Correlation", 0)
-
-        tracking_error = (
-            kpi.get(
-                "Tracking Error annualisé",
-                kpi.get(
-                    "Tracking Error annualise",
-                    0
-                )
+        perf_port = float(
+            safe_get(
+                kpi,
+                "Performance absolue Portefeuille"
             )
         ) * 100
 
-        information_ratio = kpi.get(
-            "Ratio Information corrigé",
-            kpi.get(
-                "Ratio Information",
-                0
+        perf_indice = float(
+            safe_get(
+                kpi,
+                "Performance absolue Indice"
+            )
+        ) * 100
+
+        alpha = float(
+            safe_get(
+                kpi,
+                "Performance relative (Alpha brut)"
+            )
+        ) * 100
+
+        beta = float(
+            safe_get(
+                kpi,
+                "Beta"
             )
         )
 
-        hit_ratio = (
-            kpi.get(
-                "Hit Ratio",
-                0
+        correlation = float(
+            safe_get(
+                kpi,
+                "Correlation"
+            )
+        )
+
+        tracking_error = float(
+            safe_get(
+                kpi,
+                "Tracking Error annualisé",
+                "Tracking Error annualise"
             )
         ) * 100
 
-        volatilite_port = (
-            kpi.get(
+        information_ratio = float(
+            safe_get(
+                kpi,
+                "Ratio Information corrigé",
+                "Ratio Information"
+            )
+        )
+
+        hit_ratio = float(
+            safe_get(
+                kpi,
+                "Hit Ratio"
+            )
+        ) * 100
+
+        volatilite_port = float(
+            safe_get(
+                kpi,
                 "Volatilité annualisée Portefeuille",
-                kpi.get(
-                    "Volatilite annualisee Portefeuille",
-                    0
-                )
+                "Volatilite annualisee Portefeuille"
             )
         ) * 100
 
-        volatilite_indice = (
-            kpi.get(
+        volatilite_indice = float(
+            safe_get(
+                kpi,
                 "Volatilité annualisée Indice",
-                kpi.get(
-                    "Volatilite annualisee Indice",
-                    0
-                )
+                "Volatilite annualisee Indice"
             )
         ) * 100
 
         # ==================================================
-        # SYNTHESE EXECUTIVE
+        # SYNTHESE
         # ==================================================
 
         st.header("1. Synthèse Exécutive")
@@ -133,7 +154,7 @@ if uploaded_file is not None:
         c7.metric("Hit Ratio", f"{hit_ratio:.2f}%")
 
         # ==================================================
-        # ANALYSE PERFORMANCE
+        # PERFORMANCE
         # ==================================================
 
         st.header("2. Analyse Performance")
@@ -141,13 +162,8 @@ if uploaded_file is not None:
         portefeuille = donnees.iloc[:, 1]
         benchmark = donnees.iloc[:, 3]
 
-        base100_port = (
-            portefeuille / portefeuille.iloc[0]
-        ) * 100
-
-        base100_bench = (
-            benchmark / benchmark.iloc[0]
-        ) * 100
+        base100_port = portefeuille / portefeuille.iloc[0] * 100
+        base100_bench = benchmark / benchmark.iloc[0] * 100
 
         fig_perf = go.Figure()
 
@@ -180,7 +196,7 @@ if uploaded_file is not None:
         )
 
         # ==================================================
-        # ANALYSE RISQUE
+        # RISQUE
         # ==================================================
 
         st.header("3. Analyse Risque")
@@ -202,8 +218,7 @@ if uploaded_file is not None:
             risque_df,
             x="Indicateur",
             y="Valeur",
-            color="Indicateur",
-            text="Valeur"
+            color="Indicateur"
         )
 
         st.plotly_chart(
@@ -259,51 +274,20 @@ if uploaded_file is not None:
 
         st.header("5. Recommandations")
 
-        recommandations = []
-
         if alpha < 0:
-            recommandations.append(
-                "🔴 Revoir la sélection des titres afin d'améliorer l'Alpha."
-            )
+            st.warning("Alpha négatif.")
 
         if information_ratio < 0:
-            recommandations.append(
-                "🔴 Les positions actives détruisent de la valeur."
-            )
+            st.warning("Les positions actives détruisent de la valeur.")
 
         if tracking_error > 5:
-            recommandations.append(
-                "🟠 Surveiller le niveau de risque actif."
-            )
+            st.info("Surveiller le Tracking Error.")
 
         if beta < 1:
-            recommandations.append(
-                "🟢 Le portefeuille conserve un profil défensif."
-            )
+            st.success("Profil plutôt défensif.")
 
         if hit_ratio < 50:
-            recommandations.append(
-                "🔴 Le Hit Ratio est insuffisant."
-            )
-
-        for ligne in recommandations:
-            st.write(ligne)
-
-        # ==================================================
-        # NOTE COMITE
-        # ==================================================
-
-        st.header("Note au Comité")
-
-        st.markdown(f"""
-**Performance du portefeuille :** {perf_port:.2f}%  
-**Performance benchmark :** {perf_indice:.2f}%  
-**Alpha :** {alpha:.2f}%  
-**Information Ratio :** {information_ratio:.2f}  
-**Tracking Error :** {tracking_error:.2f}%  
-**Beta :** {beta:.2f}  
-**Hit Ratio :** {hit_ratio:.2f}%
-""")
+            st.warning("Hit Ratio inférieur à 50 %.")
 
         # ==================================================
         # EXPORT EXCEL
@@ -343,8 +327,8 @@ if uploaded_file is not None:
 
             export_df.to_excel(
                 writer,
-                sheet_name="Reporting",
-                index=False
+                index=False,
+                sheet_name="Reporting"
             )
 
         st.download_button(
@@ -357,5 +341,5 @@ if uploaded_file is not None:
     except Exception as e:
 
         st.error(
-            f"Erreur lors du traitement : {e}"
+            f"Erreur lors du traitement : {str(e)}"
         )

@@ -1,6 +1,11 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
+import plotly.express as px
+
+# ==================================================
+# CONFIG
+# ==================================================
 
 st.set_page_config(
     page_title="Reporting Comité RPC",
@@ -10,8 +15,12 @@ st.set_page_config(
 
 st.title("📊 Reporting Comité Actions RPC")
 
+# ==================================================
+# UPLOAD
+# ==================================================
+
 uploaded_file = st.file_uploader(
-    "Charger le fichier Excel",
+    "Choisir le fichier Excel",
     type=["xlsx"]
 )
 
@@ -19,7 +28,10 @@ if uploaded_file:
 
     try:
 
-        # Lecture des feuilles
+        # ------------------------------------------
+        # LECTURE DES FEUILLES
+        # ------------------------------------------
+
         donnees = pd.read_excel(
             uploaded_file,
             sheet_name=0
@@ -30,9 +42,17 @@ if uploaded_file:
             sheet_name=1
         )
 
+        filtre = pd.read_excel(
+            uploaded_file,
+            sheet_name=2
+        )
+
         st.success("✅ Fichier chargé")
 
-        # Renommage des colonnes
+        # ------------------------------------------
+        # KPI
+        # ------------------------------------------
+
         analyse.columns = [
             "Indicateur",
             "Valeur"
@@ -66,29 +86,61 @@ if uploaded_file:
             ) * 100
         )
 
-        beta = kpi.get(
-            "Beta",
+        beta = kpi.get("Beta",0)
+
+        correlation = kpi.get(
+            "Correlation",
             0
         )
 
-        ir = kpi.get(
+        tracking_error = (
+            kpi.get(
+                "Tracking Error annualise",
+                0
+            ) * 100
+        )
+
+        information_ratio = kpi.get(
             "Ratio Information",
             0
         )
 
-        # KPI
+        hit_ratio = (
+            kpi.get(
+                "Hit Ratio",
+                0
+            ) * 100
+        )
 
-        st.subheader("Synthèse Exécutive")
+        volatilite_port = (
+            kpi.get(
+                "Volatilite annualisee Portefeuille",
+                0
+            ) * 100
+        )
 
-        c1, c2, c3, c4, c5 = st.columns(5)
+        volatilite_indice = (
+            kpi.get(
+                "Volatilite annualisee Indice",
+                0
+            ) * 100
+        )
+
+        # ==================================================
+        # 1. SYNTHESE EXECUTIVE
+        # ==================================================
+
+        st.header("1. Synthèse Exécutive")
+
+        c1,c2,c3,c4,c5,c6 = st.columns(6)
 
         c1.metric(
-            "Performance",
+            "Perf Portefeuille",
             f"{perf_port:.2f}%"
         )
 
         c2.metric(
-            "Indice",
+            "Benchmark",
             f"{perf_indice:.2f}%"
         )
 
@@ -103,11 +155,20 @@ if uploaded_file:
         )
 
         c5.metric(
-            "Information Ratio",
-            f"{ir:.2f}"
+            "Tracking Error",
+            f"{tracking_error:.2f}%"
         )
 
-        # Base 100
+        c6.metric(
+            "Info Ratio",
+            f"{information_ratio:.2f}"
+        )
+
+        # ==================================================
+        # 2. ANALYSE PERFORMANCE
+        # ==================================================
+
+        st.header("2. Analyse Performance")
 
         portefeuille = donnees.iloc[:,1]
 
@@ -123,67 +184,158 @@ if uploaded_file:
             benchmark.iloc[0]
         ) * 100
 
-        fig = go.Figure()
+        fig_perf = go.Figure()
 
-        fig.add_trace(
+        fig_perf.add_trace(
             go.Scatter(
+                x=donnees.iloc[:,0],
                 y=base100_port,
                 name="Portefeuille"
             )
         )
 
-        fig.add_trace(
+        fig_perf.add_trace(
             go.Scatter(
+                x=donnees.iloc[:,0],
                 y=base100_bench,
                 name="Benchmark"
             )
         )
 
-        fig.update_layout(
+        fig_perf.update_layout(
             title="Evolution Base 100"
         )
 
         st.plotly_chart(
-            fig,
+            fig_perf,
             use_container_width=True
         )
 
-        # Analyse
+        # ==================================================
+        # 3. ANALYSE RISQUE
+        # ==================================================
 
-        st.subheader(
-            "Commentaire Automatique"
+        st.header("3. Analyse Risque")
+
+        df_risque = pd.DataFrame({
+
+            "Indicateur":[
+                "Volatilité Portefeuille",
+                "Volatilité Benchmark",
+                "Tracking Error"
+            ],
+
+            "Valeur":[
+                volatilite_port,
+                volatilite_indice,
+                tracking_error
+            ]
+        })
+
+        fig_risk = px.bar(
+            df_risque,
+            x="Indicateur",
+            y="Valeur",
+            text="Valeur"
         )
 
-        commentaire = f"""
-Performance du portefeuille :
-{perf_port:.2f} %
-
-Performance du benchmark :
-{perf_indice:.2f} %
-
-Alpha :
-{alpha:.2f} %
-
-Beta :
-{beta:.2f}
-
-Information Ratio :
-{ir:.2f}
-"""
-
-        st.info(commentaire)
-
-        st.subheader(
-            "Données"
+        st.plotly_chart(
+            fig_risk,
+            use_container_width=True
         )
+
+        # ==================================================
+        # 4. GESTION ACTIVE
+        # ==================================================
+
+        st.header("4. Gestion Active")
+
+        active_df = pd.DataFrame({
+
+            "Indicateur":[
+                "Alpha",
+                "Information Ratio",
+                "Beta",
+                "Corrélation"
+            ],
+
+            "Valeur":[
+                alpha,
+                information_ratio,
+                beta,
+                correlation
+            ]
+        })
 
         st.dataframe(
-            donnees,
+            active_df,
             use_container_width=True
+        )
+
+        if len(filtre.columns) > 0:
+
+            fig_active = px.histogram(
+                filtre,
+                x=filtre.columns[0],
+                title="Distribution Active Return"
+            )
+
+            st.plotly_chart(
+                fig_active,
+                use_container_width=True
+            )
+
+        # ==================================================
+        # 5. RECOMMANDATIONS
+        # ==================================================
+
+        st.header("5. Recommandations")
+
+        recommandations = []
+
+        if alpha < 0:
+            recommandations.append(
+                "🔴 Revoir la sélection de titres afin d'améliorer l'alpha."
+            )
+
+        if information_ratio < 0:
+            recommandations.append(
+                "🔴 Réévaluer les choix de gestion active."
+            )
+
+        if tracking_error > 5:
+            recommandations.append(
+                "🟠 Surveiller le niveau de risque actif."
+            )
+
+        if beta < 1:
+            recommandations.append(
+                "🟢 Le portefeuille conserve un profil défensif."
+            )
+
+        for r in recommandations:
+            st.write(r)
+
+        # ==================================================
+        # NOTE COMITE
+        # ==================================================
+
+        st.header("Note au Comité")
+
+        st.info(
+            f"""
+Le portefeuille affiche une performance de {perf_port:.2f}% contre {perf_indice:.2f}% pour le benchmark.
+
+L'alpha ressort à {alpha:.2f}% et l'Information Ratio à {information_ratio:.2f}, indiquant une sous-performance relative.
+
+Le bêta ({beta:.2f}) et la corrélation ({correlation:.2f}) traduisent le degré de sensibilité du portefeuille au marché.
+
+Le Tracking Error s'établit à {tracking_error:.2f}% tandis que la volatilité annualisée ressort à {volatilite_port:.2f}%.
+"""
         )
 
     except Exception as e:
 
         st.error(
-            f"Erreur : {str(e)}"
+            f"Erreur : {e}"
         )

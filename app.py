@@ -1,142 +1,130 @@
 import streamlit as st
 import pandas as pd
-i*port plotly.graph_objects as go
-im*ort plotly.express as px
+import plotly.graph_objects as go
+import plotly.express as px
 
-# ======*==================================*========
+# ==================================================
 # CONFIGURATION
-# =======*==================================*=======
+# ==================================================
 
 st.set_page_config(
-    p*ge_title="Reporting Comité RPC",
- *  page_icon="📊",
-    layout="wide*
+    page_title="Reporting Comité RPC",
+    page_icon="📊",
+    layout="wide"
 )
 
-st.title("📊 Reporting Comité *ctions RPC")
+st.title("📊 Reporting Comité Actions RPC")
 
-# ==================*===============================
-# *PLOAD
-# ==========================*=======================
+# ==================================================
+# UPLOAD
+# ==================================================
 
-uploaded_*ile = st.file_uploader(
-    "Charg*r le fichier Excel",
+uploaded_file = st.file_uploader(
+    "Charger le fichier Excel",
     type=["xlsx"]
 )
 
-if uploaded_file:
+if uploaded_file is not None:
 
-    try:*
+    try:
+
         donnees = pd.read_excel(
-*           uploaded_file,
-        *   sheet_name=0
+            uploaded_file,
+            sheet_name=0
         )
 
-       *analyse = pd.read_excel(
-         *  uploaded_file,
-            sheet*name=1
+        analyse = pd.read_excel(
+            uploaded_file,
+            sheet_name=1
         )
 
-        filtre =*pd.read_excel(
-            uploade*_file,
+        filtre = pd.read_excel(
+            uploaded_file,
             sheet_name=2
-  *     )
+        )
 
-        st.success("✅ Fich*er chargé avec succès")
+        st.success("✅ Fichier chargé avec succès")
 
-        #*==================================*===============
+        # ==================================================
         # KPI
-    *   # =============================*====================
+        # ==================================================
 
-        anal*se.columns = [
+        analyse.columns = [
             "Indicateur",
             "Valeur"
         ]
 
         kpi = dict(
-           *zip(
+            zip(
                 analyse["Indicateur"],
                 analyse["Valeur"]
             )
         )
 
- *      perf_port = (
-            kp*.get(
-                "Performance*absolue Portefeuille",
-           *    0
-            ) * 100
-        *
+        perf_port = kpi.get(
+            "Performance absolue Portefeuille",
+            0
+        ) * 100
 
-        perf_indice = (
-        *   kpi.get(
-                "Perfo*mance absolue Indice",
-           *    0
-            ) * 100
-        *
+        perf_indice = kpi.get(
+            "Performance absolue Indice",
+            0
+        ) * 100
 
-        alpha = (
-            kp*.get(
-                "Performance*relative (Alpha brut)",
-          *     0
-            ) * 100
-       *)
+        alpha = kpi.get(
+            "Performance relative (Alpha brut)",
+            0
+        ) * 100
 
         beta = kpi.get(
-       *    "Beta",
+            "Beta",
             0
-        *
+        )
 
         correlation = kpi.get(
- *          "Correlation",
-         *  0
-        )
-
-        tracking_er*or = (
-            kpi.get(
-      *         "Tracking Error annualise*,
-                0
-            ) * 100
-        )
-
-        informatio*_ratio = kpi.get(
-            "Rat*o Information",
+            "Correlation",
             0
-    *   )
-
-        hit_ratio = (
-      *     kpi.get(
-                "Hit*Ratio",
-                0
-        *   ) * 100
         )
 
-        vola*ilite_port = (
-            kpi.get*
-                "Volatilite annua*isee Portefeuille",
-              * 0
-            ) * 100
+        tracking_error = kpi.get(
+            "Tracking Error annualise",
+            0
+        ) * 100
+
+        information_ratio = kpi.get(
+            "Ratio Information",
+            0
         )
 
-*       volatilite_indice = (
-     *      kpi.get(
-                "Vo*atilite annualisee Indice",
-      *         0
-            ) * 100
-   *    )
+        hit_ratio = kpi.get(
+            "Hit Ratio",
+            0
+        ) * 100
 
-        # =================*================================
- *      # 1. SYNTHESE EXECUTIVE
-    *   # =============================*====================
+        volatilite_port = kpi.get(
+            "Volatilite annualisee Portefeuille",
+            0
+        ) * 100
 
-        st.h*ader("1. Synthèse Exécutive")
+        volatilite_indice = kpi.get(
+            "Volatilite annualisee Indice",
+            0
+        ) * 100
 
-   *    c1, c2, c3, c4 = st.columns(4)*
+        # ==================================================
+        # 1. SYNTHESE EXECUTIVE
+        # ==================================================
+
+        st.header("1. Synthèse Exécutive")
+
+        c1, c2, c3, c4 = st.columns(4)
+
         c1.metric(
-            "P*rformance",
-            f"{perf_po*t:.2f}%"
+            "Performance",
+            f"{perf_port:.2f}%"
         )
 
-        c2.met*ic(
+        c2.metric(
             "Benchmark",
             f"{perf_indice:.2f}%"
         )
@@ -178,20 +166,18 @@ if uploaded_file:
         benchmark = donnees.iloc[:, 3]
 
         base100_port = (
-            portefeuille /
-            portefeuille.iloc[0]
+            portefeuille / portefeuille.iloc[0]
         ) * 100
 
         base100_bench = (
-            benchmark /
-            benchmark.iloc[0]
+            benchmark / benchmark.iloc[0]
         ) * 100
 
         fig_perf = go.Figure()
 
         fig_perf.add_trace(
             go.Scatter(
-                x=donnees.iloc[:,0],
+                x=donnees.iloc[:, 0],
                 y=base100_port,
                 mode="lines",
                 name="Portefeuille"
@@ -200,7 +186,7 @@ if uploaded_file:
 
         fig_perf.add_trace(
             go.Scatter(
-                x=donnees.iloc[:,0],
+                x=donnees.iloc[:, 0],
                 y=base100_bench,
                 mode="lines",
                 name="Benchmark"
@@ -224,14 +210,12 @@ if uploaded_file:
         st.header("3. Analyse Risque")
 
         risque_df = pd.DataFrame({
-
-            "Indicateur":[
+            "Indicateur": [
                 "Volatilité Portefeuille",
                 "Volatilité Indice",
                 "Tracking Error"
             ],
-
-            "Valeur":[
+            "Valeur": [
                 volatilite_port,
                 volatilite_indice,
                 tracking_error
@@ -259,12 +243,18 @@ if uploaded_file:
                 go.Indicator(
                     mode="gauge+number",
                     value=beta,
-                    title={"text":"Beta"},
+                    title={"text": "Beta"},
                     gauge={
-                        "axis":{"range":[0,1.5]},
-                        "steps":[
-                            {"range":[0,1],"color":"lightgreen"},
-                            {"range":[1,1.5],"color":"salmon"}
+                        "axis": {"range": [0, 1.5]},
+                        "steps": [
+                            {
+                                "range": [0, 1],
+                                "color": "lightgreen"
+                            },
+                            {
+                                "range": [1, 1.5],
+                                "color": "salmon"
+                            }
                         ]
                     }
                 )
@@ -281,13 +271,22 @@ if uploaded_file:
                 go.Indicator(
                     mode="gauge+number",
                     value=hit_ratio,
-                    title={"text":"Hit Ratio"},
+                    title={"text": "Hit Ratio"},
                     gauge={
-                        "axis":{"range":[0,100]},
-                        "steps":[
-                            {"range":[0,50],"color":"red"},
-                            {"range":[50,60],"color":"orange"},
-                            {"range":[60,100],"color":"green"}
+                        "axis": {"range": [0, 100]},
+                        "steps": [
+                            {
+                                "range": [0, 50],
+                                "color": "red"
+                            },
+                            {
+                                "range": [50, 60],
+                                "color": "orange"
+                            },
+                            {
+                                "range": [60, 100],
+                                "color": "green"
+                            }
                         ]
                     }
                 )
@@ -305,16 +304,14 @@ if uploaded_file:
         st.header("4. Gestion Active")
 
         active_df = pd.DataFrame({
-
-            "Indicateur":[
+            "Indicateur": [
                 "Alpha",
                 "Information Ratio",
                 "Beta",
                 "Corrélation",
                 "Hit Ratio"
             ],
-
-            "Valeur":[
+            "Valeur": [
                 alpha,
                 information_ratio,
                 beta,
@@ -352,12 +349,12 @@ if uploaded_file:
 
         if alpha < 0:
             recommandations.append(
-                "🔴 Revoir la sélection de titres afin d'améliorer l'alpha."
+                "🔴 Revoir la sélection des titres afin d'améliorer l'Alpha."
             )
 
         if information_ratio < 0:
             recommandations.append(
-                "🔴 Les paris actifs ne créent pas de valeur. Réviser le processus d'investissement."
+                "🔴 Les positions actives détruisent de la valeur."
             )
 
         if tracking_error > 5:
@@ -384,21 +381,26 @@ if uploaded_file:
 
         st.header("Note au Comité")
 
-        st.info(f"""
-Le portefeuille affiche une performance de {perf_port:.2f}% contre {perf_indice:.2f}% pour le benchmark.
+        st.info(
+            f"""
+Performance du portefeuille : {perf_port:.2f} %
 
-L'alpha ressort à {alpha:.2f}% et l'Information Ratio à {information_ratio:.2f}, traduisant une sous-performance relative.
+Performance benchmark : {perf_indice:.2f} %
 
-Le bêta ({beta:.2f}) et la corrélation ({correlation:.2f}) reflètent le niveau d'exposition au marché.
+Alpha : {alpha:.2f} %
 
-Le Tracking Error ressort à {tracking_error:.2f}% tandis que le Hit Ratio atteint {hit_ratio:.2f}%.
+Information Ratio : {information_ratio:.2f}
 
-Une revue de la gestion active apparaît nécessaire afin de renforcer la création de valeur relative.
-""")
+Tracking Error : {tracking_error:.2f} %
+
+Beta : {beta:.2f}
+
+Hit Ratio : {hit_ratio:.2f} %
+"""
+        )
 
     except Exception as e:
 
         st.error(
             f"Erreur lors du traitement : {e}"
         )
-    

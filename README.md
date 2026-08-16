@@ -1,35 +1,58 @@
-# Reporting Comité RPC V4
+# Reporting Comité RPC V3
 
-Application Streamlit de reporting institutionnel pour portefeuille Actions.
+Application Streamlit permettant de générer automatiquement :
+
+- Dashboard interactif
+- Analyse de performance
+- Analyse du risque
+- Rapport PDF
+- Présentation PowerPoint
 
 ## Fonctionnalités
 
-- Upload fichier Excel
-- Lecture automatique des indicateurs
-- Dashboard interactif
-- Evolution Base 100
-- Analyse du risque
-- Analyse de la gestion active
-- Export Excel
-- Export PDF
-- Export PowerPoint
+✅ Upload Excel
 
-## Déploiement
+✅ Lecture automatique des KPI
+
+✅ Dashboard interactif Plotly
+
+✅ Analyse automatique
+
+✅ Export Excel
+
+✅ Export PDF
+
+✅ Export PowerPoint
+
+---
+
+## Déploiement Streamlit Cloud
+
+1. Créer un dépôt GitHub
+2. Copier les fichiers du projet
+3. Connecter le dépôt à Streamlit Cloud
+4. Déployer
+
+---
+
+## Installation locale
 
 ```bash
 pip install -r requirements.txt
 streamlit run app.py
 ```
 
-## Structure
+## Arborescence
 
 ```text
 reporting-comite/
 │
 ├── app.py
 ├── requirements.txt
-├── README.md
 ├── .gitignore
+├── README.md
 │
-└── exports/
+├── exports/
+│
+└── templates/
 ```

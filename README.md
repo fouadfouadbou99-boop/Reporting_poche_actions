@@ -1,4 +1,4 @@
-# Reporting Comité Actions RPC
+# Analyse Portefeuille Actions
 
 Application Streamlit permettant de générer automatiquement un reporting de portefeuille Actions RPC à partir d'un fichier Excel.
 

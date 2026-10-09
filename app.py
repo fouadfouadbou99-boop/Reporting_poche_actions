@@ -362,82 +362,103 @@ if uploaded_file is not None:
                 "🔴 Faible taux de succès de gestion."
             )
 
-       # ==================================================
-# NOTE COMITE
-# ==================================================
-st.header("5. Commentaire de Gestion à l'attention du Comité")
+        # ==================================================
+        # COMMENTAIRE DE GESTION
+        # ==================================================
+        st.header("5. Commentaire de Gestion à l'attention du Comité")
 
-if alpha > 0:
-    conclusion_perf = (
-        f"Le portefeuille surperforme son indice de référence de "
-        f"{alpha*100:.2f}% sur la période analysée."
-    )
-else:
-    conclusion_perf = (
-        f"Le portefeuille affiche une sous-performance de "
-        f"{abs(alpha)*100:.2f}% par rapport à son indice de référence."
-    )
+        if alpha > 0:
+            conclusion_perf = (
+                f"Le portefeuille surperforme son indice de référence de "
+                f"{alpha*100:.2f}% sur la période analysée."
+            )
+        else:
+            conclusion_perf = (
+                f"Le portefeuille affiche une sous-performance de "
+                f"{abs(alpha)*100:.2f}% par rapport à son indice de référence."
+            )
 
-if ir > 0.50:
-    commentaire_ir = (
-        "La création de valeur est jugée significative au regard du risque actif pris."
-    )
-elif ir > 0:
-    commentaire_ir = (
-        "La gestion active demeure contributive mais avec une efficacité modérée."
-    )
-else:
-    commentaire_ir = (
-        "Le risque actif engagé n'a pas été suffisamment rémunéré sur la période."
-    )
+        if ir > 0.50:
+            commentaire_ir = (
+                "La création de valeur est significative au regard du risque actif pris."
+            )
+        elif ir > 0:
+            commentaire_ir = (
+                "La gestion active demeure contributive mais avec une efficacité modérée."
+            )
+        else:
+            commentaire_ir = (
+                "Le risque actif engagé n'a pas été suffisamment rémunéré sur la période."
+            )
 
-if beta_value < 0.95:
-    commentaire_beta = (
-        "Le portefeuille présente un profil plus défensif que le marché."
-    )
-elif beta_value > 1.05:
-    commentaire_beta = (
-        "Le portefeuille présente une sensibilité supérieure à celle du marché."
-    )
-else:
-    commentaire_beta = (
-        "Le portefeuille conserve une sensibilité globalement alignée sur son indice de référence."
-    )
+        if beta_value < 0.95:
+            commentaire_beta = (
+                "Le portefeuille présente un profil plus défensif que le marché."
+            )
+        elif beta_value > 1.05:
+            commentaire_beta = (
+                "Le portefeuille présente une sensibilité supérieure à celle du marché."
+            )
+        else:
+            commentaire_beta = (
+                "Le portefeuille conserve une sensibilité globalement alignée sur son indice de référence."
+            )
 
-commentaire = f"""
-### Synthèse de la période
+        if hit > 0.60:
+            commentaire_hit = (
+                "Le taux de succès témoigne d'une bonne régularité dans les décisions d'investissement."
+            )
+        else:
+            commentaire_hit = (
+                "La régularité de la surperformance demeure perfectible."
+            )
 
-Sur l'horizon **{horizon}**, le portefeuille actions enregistre une performance de
-**{perf_port*100:.2f}%** contre **{perf_bench*100:.2f}%** pour le **MASI RB**,
-soit un écart relatif de **{alpha*100:.2f}%**.
+        commentaire = f"""
+### Synthèse Exécutive
+
+Sur l'horizon **{horizon}**, le portefeuille actions a enregistré une performance de
+**{perf_port*100:.2f}%** contre **{perf_bench*100:.2f}%** pour son indice de référence
+**MASI RB**, soit un écart relatif de **{alpha*100:.2f}%**.
 
 {conclusion_perf}
 
-L'analyse des indicateurs de gestion active fait ressortir un **Information Ratio de {ir:.2f}**
-pour un **Tracking Error de {te*100:.2f}%**. {commentaire_ir}
+### Analyse de la Gestion Active
 
-Le portefeuille affiche un **bêta de {beta_value:.2f}** et une corrélation de
-**{corr:.2f}** avec son indice de référence. {commentaire_beta}
+L'Information Ratio ressort à **{ir:.2f}** pour un Tracking Error de
+**{te*100:.2f}%**. {commentaire_ir}
 
-Sur le plan du risque, la volatilité annualisée ressort à
+Le portefeuille présente un bêta de **{beta_value:.2f}** et une corrélation de
+**{corr:.2f}** avec le marché. {commentaire_beta}
+
+### Analyse du Risque
+
+La volatilité annualisée du portefeuille s'établit à
 **{vol_port*100:.2f}%**, contre **{vol_bench*100:.2f}%** pour le benchmark.
-Le recul maximal observé sur la période (**Maximum Drawdown**) s'établit à
-**{mdd*100:.2f}%**.
 
-Enfin, le **Hit Ratio de {hit*100:.2f}%** traduit la proportion de périodes durant
-lesquelles la gestion a généré une performance relative positive vis-à-vis de
-l'indice de référence.
+Le recul maximal observé sur la période (Maximum Drawdown) est de
+**{mdd*100:.2f}%**, traduisant un niveau de risque globalement maîtrisé au regard
+de l'évolution du marché.
 
-### Appréciation Générale
+### Appréciation de la Gestion
 
-Au regard des indicateurs observés, la gestion se caractérise par un niveau de
-risque maîtrisé et une exposition cohérente avec les objectifs du mandat.
-Une attention particulière reste portée à la pérennité des sources de performance
-et à la diversification des contributeurs afin de maintenir une création de valeur
-durable dans différents contextes de marché.
+Le Hit Ratio ressort à **{hit*100:.2f}%**. {commentaire_hit}
+
+Il convient toutefois d'apprécier cette performance en tenant compte de la
+contribution significative de certaines valeurs ayant fortement bénéficié de la
+dynamique du marché. La poursuite des efforts de diversification des moteurs de
+performance demeure essentielle afin de consolider durablement la création de
+valeur du portefeuille.
+
+### Conclusion
+
+Au regard des indicateurs observés, le portefeuille présente un profil de risque
+cohérent avec son indice de référence et une gestion globalement maîtrisée.
+L'attention restera portée sur la diversification des contributeurs à la
+performance ainsi que sur le maintien d'une génération de valeur récurrente
+dans différents environnements de marché.
 """
 
-st.markdown(commentaire)
+        st.markdown(commentaire)
 
         # ==================================================
         # EXPORT

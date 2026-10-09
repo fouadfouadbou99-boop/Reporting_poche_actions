@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
 from io import BytesIO
@@ -7,7 +8,6 @@ from io import BytesIO
 # ==================================================
 # CONFIGURATION
 # ==================================================
-
 st.set_page_config(
     page_title="Reporting Comité RPC",
     page_icon="📊",
@@ -17,16 +17,41 @@ st.set_page_config(
 st.title("📊 Reporting Comité Actions RPC")
 
 # ==================================================
-# FONCTION UTILITAIRE
+# OUTILS
 # ==================================================
 
-def safe_get(kpi, *keys, default=0):
-    for key in keys:
-        if key in kpi:
-            value = kpi[key]
-            if pd.notna(value):
-                return value
-    return default
+def annualized_vol(returns):
+    return returns.std() * np.sqrt(52)
+
+def tracking_error(port_ret, bench_ret):
+    return (port_ret - bench_ret).std() * np.sqrt(52)
+
+def beta(port_ret, bench_ret):
+    cov = np.cov(port_ret, bench_ret)[0, 1]
+    var = np.var(bench_ret)
+    if var == 0:
+        return 0
+    return cov / var
+
+def information_ratio(port_ret, bench_ret):
+    active = port_ret - bench_ret
+
+    te = active.std() * np.sqrt(52)
+
+    if te == 0:
+        return 0
+
+    alpha_annual = active.mean() * 52
+
+    return alpha_annual / te
+
+def max_drawdown(base100):
+    running_max = base100.cummax()
+    drawdown = base100 / running_max - 1
+    return drawdown.min()
+
+def hit_ratio(port_ret, bench_ret):
+    return ((port_ret - bench_ret) > 0).mean()
 
 # ==================================================
 # UPLOAD
@@ -41,298 +66,327 @@ if uploaded_file is not None:
 
     try:
 
-        donnees = pd.read_excel(uploaded_file, sheet_name=0)
-        analyse = pd.read_excel(uploaded_file, sheet_name=1)
-        filtre = pd.read_excel(uploaded_file, sheet_name=2)
+        df = pd.read_excel(uploaded_file, sheet_name=0)
 
         st.success("✅ Fichier chargé avec succès")
 
+        # ------------------------------------------------
+        # Normalisation colonnes
+        # ------------------------------------------------
+
+        df.columns = [str(c).strip() for c in df.columns]
+
+        date_col = df.columns[0]
+
+        port_col = "VL_portefeuille_actions"
+        bench_col = "MASI_RB"
+
+        df[date_col] = pd.to_datetime(df[date_col])
+
+        df = df.sort_values(date_col)
+
+        # ------------------------------------------------
+        # HORIZON
+        # ------------------------------------------------
+
+        st.sidebar.header("⚙️ Paramètres")
+
+        horizon = st.sidebar.selectbox(
+            "Horizon d'analyse",
+            [
+                "Depuis l'origine",
+                "YTD",
+                "1 mois",
+                "3 mois",
+                "6 mois",
+                "12 mois",
+                "Personnalisé"
+            ]
+        )
+
+        end_date = df[date_col].max()
+
+        if horizon == "Depuis l'origine":
+
+            start_date = df[date_col].min()
+
+        elif horizon == "YTD":
+
+            start_date = pd.Timestamp(year=end_date.year,
+                                      month=1,
+                                      day=1)
+
+        elif horizon == "1 mois":
+
+            start_date = end_date - pd.DateOffset(months=1)
+
+        elif horizon == "3 mois":
+
+            start_date = end_date - pd.DateOffset(months=3)
+
+        elif horizon == "6 mois":
+
+            start_date = end_date - pd.DateOffset(months=6)
+
+        elif horizon == "12 mois":
+
+            start_date = end_date - pd.DateOffset(months=12)
+
+        else:
+
+            start_date, end_date = st.sidebar.date_input(
+                "Période",
+                value=(
+                    df[date_col].min(),
+                    df[date_col].max()
+                )
+            )
+
+        df_period = df[
+            (df[date_col] >= pd.to_datetime(start_date))
+            &
+            (df[date_col] <= pd.to_datetime(end_date))
+        ].copy()
+
+        # ------------------------------------------------
+        # CALCULS
+        # ------------------------------------------------
+
+        port_base100 = (
+            df_period[port_col]
+            / df_period[port_col].iloc[0]
+        ) * 100
+
+        bench_base100 = (
+            df_period[bench_col]
+            / df_period[bench_col].iloc[0]
+        ) * 100
+
+        perf_port = (
+            df_period[port_col].iloc[-1]
+            /
+            df_period[port_col].iloc[0]
+            -
+            1
+        )
+
+        perf_bench = (
+            df_period[bench_col].iloc[-1]
+            /
+            df_period[bench_col].iloc[0]
+            -
+            1
+        )
+
+        alpha = perf_port - perf_bench
+
+        port_returns = df_period[port_col].pct_change().dropna()
+        bench_returns = df_period[bench_col].pct_change().dropna()
+
+        vol_port = annualized_vol(port_returns)
+        vol_bench = annualized_vol(bench_returns)
+
+        beta_value = beta(
+            port_returns,
+            bench_returns
+        )
+
+        corr = port_returns.corr(
+            bench_returns
+        )
+
+        te = tracking_error(
+            port_returns,
+            bench_returns
+        )
+
+        ir = information_ratio(
+            port_returns,
+            bench_returns
+        )
+
+        hit = hit_ratio(
+            port_returns,
+            bench_returns
+        )
+
+        mdd = max_drawdown(
+            port_base100
+        )
+
         # ==================================================
         # KPI
-        # ==================================================
-
-        analyse.columns = ["Indicateur", "Valeur"]
-
-        kpi = dict(
-            zip(
-                analyse["Indicateur"],
-                analyse["Valeur"]
-            )
-        )
-
-        perf_port = float(
-            safe_get(
-                kpi,
-                "Performance absolue Portefeuille"
-            )
-        ) * 100
-
-        perf_indice = float(
-            safe_get(
-                kpi,
-                "Performance absolue Indice"
-            )
-        ) * 100
-
-        alpha = float(
-            safe_get(
-                kpi,
-                "Performance relative (Alpha brut)"
-            )
-        ) * 100
-
-        beta = float(
-            safe_get(
-                kpi,
-                "Beta"
-            )
-        )
-
-        correlation = float(
-            safe_get(
-                kpi,
-                "Correlation",
-                "Corrélation"
-            )
-        )
-
-        tracking_error = float(
-            safe_get(
-                kpi,
-                "Tracking Error annualisé",
-                "Tracking Error annualise"
-            )
-        ) * 100
-
-        information_ratio = float(
-            safe_get(
-                kpi,
-                "Ratio Information corrigé",
-                "Ratio Information"
-            )
-        )
-
-        hit_ratio = float(
-            safe_get(
-                kpi,
-                "Hit Ratio"
-            )
-        ) * 100
-
-        volatilite_port = float(
-            safe_get(
-                kpi,
-                "Volatilité annualisée Portefeuille",
-                "Volatilite annualisee Portefeuille"
-            )
-        ) * 100
-
-        volatilite_indice = float(
-            safe_get(
-                kpi,
-                "Volatilité annualisée Indice",
-                "Volatilite annualisee Indice"
-            )
-        ) * 100
-
-        # ==================================================
-        # SYNTHESE EXECUTIVE
         # ==================================================
 
         st.header("1. Synthèse Exécutive")
 
         c1, c2, c3, c4 = st.columns(4)
 
-        c1.metric("Performance", f"{perf_port:.2f}%")
-        c2.metric("Benchmark", f"{perf_indice:.2f}%")
-        c3.metric("Alpha", f"{alpha:.2f}%")
-        c4.metric("Information Ratio", f"{information_ratio:.2f}")
+        c1.metric(
+            "Performance",
+            f"{perf_port*100:.2f}%"
+        )
 
-        c5, c6, c7 = st.columns(3)
+        c2.metric(
+            "Benchmark",
+            f"{perf_bench*100:.2f}%"
+        )
 
-        c5.metric("Beta", f"{beta:.2f}")
-        c6.metric("Tracking Error", f"{tracking_error:.2f}%")
-        c7.metric("Hit Ratio", f"{hit_ratio:.2f}%")
+        c3.metric(
+            "Alpha",
+            f"{alpha*100:.2f}%"
+        )
+
+        c4.metric(
+            "Information Ratio",
+            f"{ir:.2f}"
+        )
+
+        c5, c6, c7, c8 = st.columns(4)
+
+        c5.metric(
+            "Bêta",
+            f"{beta_value:.2f}"
+        )
+
+        c6.metric(
+            "Tracking Error",
+            f"{te*100:.2f}%"
+        )
+
+        c7.metric(
+            "Hit Ratio",
+            f"{hit*100:.2f}%"
+        )
+
+        c8.metric(
+            "Max Drawdown",
+            f"{mdd*100:.2f}%"
+        )
 
         # ==================================================
-        # ANALYSE PERFORMANCE
+        # PERFORMANCE
         # ==================================================
 
         st.header("2. Analyse Performance")
-
-        portefeuille = donnees.iloc[:, 1]
-        benchmark = donnees.iloc[:, 3]
-
-        base100_port = (
-            portefeuille / portefeuille.iloc[0]
-        ) * 100
-
-        base100_bench = (
-            benchmark / benchmark.iloc[0]
-        ) * 100
 
         fig_perf = go.Figure()
 
         fig_perf.add_trace(
             go.Scatter(
-                x=donnees.iloc[:, 0],
-                y=base100_port,
-                mode="lines",
-                name="Portefeuille"
+                x=df_period[date_col],
+                y=port_base100,
+                name="Portefeuille",
+                line=dict(width=3)
             )
         )
 
         fig_perf.add_trace(
             go.Scatter(
-                x=donnees.iloc[:, 0],
-                y=base100_bench,
-                mode="lines",
-                name="Benchmark"
+                x=df_period[date_col],
+                y=bench_base100,
+                name="MASI RB",
+                line=dict(width=3)
             )
         )
 
         fig_perf.update_layout(
-            title="Evolution Base 100",
+            title=f"Evolution Base 100 - {horizon}",
             height=500
         )
 
         st.plotly_chart(
             fig_perf,
-            width="stretch"
+            use_container_width=True
         )
 
         # ==================================================
-        # ANALYSE RISQUE
+        # RISQUE
         # ==================================================
 
         st.header("3. Analyse Risque")
 
-        risque_df = pd.DataFrame({
+        risk_df = pd.DataFrame({
             "Indicateur": [
                 "Volatilité Portefeuille",
-                "Volatilité Indice",
+                "Volatilité Benchmark",
                 "Tracking Error"
             ],
             "Valeur": [
-                volatilite_port,
-                volatilite_indice,
-                tracking_error
+                vol_port * 100,
+                vol_bench * 100,
+                te * 100
             ]
         })
 
         fig_risk = px.bar(
-            risque_df,
+            risk_df,
             x="Indicateur",
             y="Valeur",
-            color="Indicateur",
             text="Valeur"
         )
 
         st.plotly_chart(
             fig_risk,
-            width="stretch"
+            use_container_width=True
         )
-
-        # ==================================================
-        # GESTION ACTIVE
-        # ==================================================
-
-        st.header("4. Gestion Active")
-
-        active_df = pd.DataFrame({
-            "Indicateur": [
-                "Alpha",
-                "Information Ratio",
-                "Beta",
-                "Corrélation",
-                "Hit Ratio"
-            ],
-            "Valeur": [
-                alpha,
-                information_ratio,
-                beta,
-                correlation,
-                hit_ratio
-            ]
-        })
-
-        st.dataframe(
-            active_df,
-            width="stretch"
-        )
-
-        if len(filtre.columns) > 0:
-
-            fig_active = px.histogram(
-                filtre,
-                x=filtre.columns[0],
-                nbins=15,
-                title="Distribution des Active Returns"
-            )
-
-            st.plotly_chart(
-                fig_active,
-                width="stretch"
-            )
 
         # ==================================================
         # RECOMMANDATIONS
         # ==================================================
 
-        st.header("5. Recommandations")
+        st.header("4. Recommandations")
 
         if alpha < 0:
             st.warning(
-                "🔴 Alpha négatif : sous-performance par rapport au benchmark."
+                "🔴 Sous-performance par rapport au benchmark."
             )
 
-        if information_ratio < 0:
+        if ir < 0:
             st.warning(
-                "🔴 Les positions actives détruisent de la valeur."
+                "🔴 Le risque actif pris n'est pas rémunéré."
             )
 
-        if tracking_error > 5:
+        if te > 0.05:
             st.info(
-                "🟠 Surveiller le niveau de Tracking Error."
+                "🟠 Niveau de Tracking Error à surveiller."
             )
 
-        if beta < 1:
+        if beta_value < 1:
             st.success(
-                "🟢 Profil plutôt défensif."
+                "🟢 Profil défensif par rapport au marché."
             )
 
-        if hit_ratio < 50:
+        if hit < 0.50:
             st.warning(
-                "🔴 Hit Ratio inférieur à 50 %."
+                "🔴 Faible taux de succès de gestion."
             )
 
         # ==================================================
         # NOTE COMITE
         # ==================================================
 
-        st.header("Note au Comité")
+        st.header("5. Note au Comité")
 
-        st.markdown(f"""
-**Performance du portefeuille :** {perf_port:.2f}%  
+        note = f"""
+**Horizon analysé :** {horizon}
 
-**Performance benchmark :** {perf_indice:.2f}%  
+**Performance portefeuille :** {perf_port*100:.2f}%  
+**Performance benchmark :** {perf_bench*100:.2f}%  
+**Alpha :** {alpha*100:.2f}%  
+**Information Ratio :** {ir:.2f}  
+**Tracking Error :** {te*100:.2f}%  
+**Bêta :** {beta_value:.2f}  
+**Corrélation :** {corr:.2f}  
+**Hit Ratio :** {hit*100:.2f}%  
+**Maximum Drawdown :** {mdd*100:.2f}%  
+"""
 
-**Alpha :** {alpha:.2f}%  
-
-**Information Ratio :** {information_ratio:.2f}  
-
-**Tracking Error :** {tracking_error:.2f}%  
-
-**Beta :** {beta:.2f}  
-
-**Hit Ratio :** {hit_ratio:.2f}%
-""")
+        st.markdown(note)
 
         # ==================================================
-        # EXPORT EXCEL
+        # EXPORT
         # ==================================================
-
-        st.header("📥 Téléchargements")
 
         export_df = pd.DataFrame({
             "Indicateur": [
@@ -340,27 +394,29 @@ if uploaded_file is not None:
                 "Performance Benchmark",
                 "Alpha",
                 "Information Ratio",
-                "Beta",
+                "Bêta",
                 "Tracking Error",
                 "Hit Ratio",
-                "Corrélation"
+                "Corrélation",
+                "Max Drawdown"
             ],
             "Valeur": [
                 perf_port,
-                perf_indice,
+                perf_bench,
                 alpha,
-                information_ratio,
-                beta,
-                tracking_error,
-                hit_ratio,
-                correlation
+                ir,
+                beta_value,
+                te,
+                hit,
+                corr,
+                mdd
             ]
         })
 
-        excel_buffer = BytesIO()
+        buffer = BytesIO()
 
         with pd.ExcelWriter(
-            excel_buffer,
+            buffer,
             engine="openpyxl"
         ) as writer:
 
@@ -371,15 +427,14 @@ if uploaded_file is not None:
             )
 
         st.download_button(
-            "📊 Télécharger Excel",
-            excel_buffer.getvalue(),
-            "Reporting_Comite_RPC.xlsx",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            "📥 Télécharger les KPI",
+            buffer.getvalue(),
+            file_name="Reporting_RPC.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
     except Exception as e:
 
         st.error(
-            f"Erreur lors du traitement : {str(e)}"
+            f"Erreur : {str(e)}"
         )
- 

@@ -362,7 +362,7 @@ if uploaded_file is not None:
                 "🔴 Faible taux de succès de gestion."
             )
 
-# ==================================================
+        # ==================================================
 # NOTE COMITE
 # ==================================================
 st.header("5. Commentaire de Gestion à l'attention du Comité")

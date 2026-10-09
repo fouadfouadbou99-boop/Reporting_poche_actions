@@ -362,27 +362,82 @@ if uploaded_file is not None:
                 "🔴 Faible taux de succès de gestion."
             )
 
-        # ==================================================
-        # NOTE COMITE
-        # ==================================================
+# ==================================================
+# NOTE COMITE
+# ==================================================
+st.header("5. Commentaire de Gestion à l'attention du Comité")
 
-        st.header("5. Note au Comité")
+if alpha > 0:
+    conclusion_perf = (
+        f"Le portefeuille surperforme son indice de référence de "
+        f"{alpha*100:.2f}% sur la période analysée."
+    )
+else:
+    conclusion_perf = (
+        f"Le portefeuille affiche une sous-performance de "
+        f"{abs(alpha)*100:.2f}% par rapport à son indice de référence."
+    )
 
-        note = f"""
-**Horizon analysé :** {horizon}
+if ir > 0.50:
+    commentaire_ir = (
+        "La création de valeur est jugée significative au regard du risque actif pris."
+    )
+elif ir > 0:
+    commentaire_ir = (
+        "La gestion active demeure contributive mais avec une efficacité modérée."
+    )
+else:
+    commentaire_ir = (
+        "Le risque actif engagé n'a pas été suffisamment rémunéré sur la période."
+    )
 
-**Performance portefeuille :** {perf_port*100:.2f}%  
-**Performance benchmark :** {perf_bench*100:.2f}%  
-**Alpha :** {alpha*100:.2f}%  
-**Information Ratio :** {ir:.2f}  
-**Tracking Error :** {te*100:.2f}%  
-**Bêta :** {beta_value:.2f}  
-**Corrélation :** {corr:.2f}  
-**Hit Ratio :** {hit*100:.2f}%  
-**Maximum Drawdown :** {mdd*100:.2f}%  
+if beta_value < 0.95:
+    commentaire_beta = (
+        "Le portefeuille présente un profil plus défensif que le marché."
+    )
+elif beta_value > 1.05:
+    commentaire_beta = (
+        "Le portefeuille présente une sensibilité supérieure à celle du marché."
+    )
+else:
+    commentaire_beta = (
+        "Le portefeuille conserve une sensibilité globalement alignée sur son indice de référence."
+    )
+
+commentaire = f"""
+### Synthèse de la période
+
+Sur l'horizon **{horizon}**, le portefeuille actions enregistre une performance de
+**{perf_port*100:.2f}%** contre **{perf_bench*100:.2f}%** pour le **MASI RB**,
+soit un écart relatif de **{alpha*100:.2f}%**.
+
+{conclusion_perf}
+
+L'analyse des indicateurs de gestion active fait ressortir un **Information Ratio de {ir:.2f}**
+pour un **Tracking Error de {te*100:.2f}%**. {commentaire_ir}
+
+Le portefeuille affiche un **bêta de {beta_value:.2f}** et une corrélation de
+**{corr:.2f}** avec son indice de référence. {commentaire_beta}
+
+Sur le plan du risque, la volatilité annualisée ressort à
+**{vol_port*100:.2f}%**, contre **{vol_bench*100:.2f}%** pour le benchmark.
+Le recul maximal observé sur la période (**Maximum Drawdown**) s'établit à
+**{mdd*100:.2f}%**.
+
+Enfin, le **Hit Ratio de {hit*100:.2f}%** traduit la proportion de périodes durant
+lesquelles la gestion a généré une performance relative positive vis-à-vis de
+l'indice de référence.
+
+### Appréciation Générale
+
+Au regard des indicateurs observés, la gestion se caractérise par un niveau de
+risque maîtrisé et une exposition cohérente avec les objectifs du mandat.
+Une attention particulière reste portée à la pérennité des sources de performance
+et à la diversification des contributeurs afin de maintenir une création de valeur
+durable dans différents contextes de marché.
 """
 
-        st.markdown(note)
+st.markdown(commentaire)
 
         # ==================================================
         # EXPORT
